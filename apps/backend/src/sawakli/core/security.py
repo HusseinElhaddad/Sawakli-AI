@@ -3,11 +3,11 @@
 from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
-
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
 from sawakli.core.config import settings
+import bcrypt
+bcrypt.__about__ = type('About', (object,), {'__version__': bcrypt.__version__})
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],

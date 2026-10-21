@@ -4,7 +4,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import declarative_base, Session, sessionmaker
+
+Base = declarative_base()
 
 _env_file: Path | None = None
 for parent in Path(__file__).resolve().parents:
@@ -27,8 +29,8 @@ else:
     load_dotenv(override=False)
 
 
-class Base(DeclarativeBase):
-    pass
+# class Base(DeclarativeBase):
+#     pass
 
 
 DATABASE_URL = os.getenv(
