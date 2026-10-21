@@ -50,11 +50,6 @@ def client(migrated_database: None) -> Generator[TestClient, None, None]:
     db = SessionLocal()
     try:
         db.execute(delete(Job))
-
-        # db.execute(text("DELETE FROM daily_metrics"))
-        # db.execute(text("DELETE FROM campaigns"))
-        # db.execute(text("DELETE FROM data_sources"))
-
         db.execute(delete(OrganizationMember))
         db.execute(delete(User))
         db.execute(delete(Organization))
