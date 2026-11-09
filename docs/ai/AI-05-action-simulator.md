@@ -208,7 +208,8 @@ based on main `9443642`. Commands below run in `apps/backend` unless stated othe
 | PostgreSQL publication / migrations | NOT RUN - PostgreSQL binaries absent; production AI-06 adapter is not implemented |
 | Docker Compose integration | NOT RUN - Docker executable absent |
 | Frontend lint/types/build/tests | NOT RUN - frontend unchanged; configured CI remains the adoption gate |
-| Remote CI and independent review | NOT RUN locally; must be verified against the published head, not inferred from configuration |
+| Remote CI on published implementation c8c3120 | FAIL - run 42671542634 ended before creating jobs; GitHub annotation: Internal server error (correlation 0483a680-b14b-4904-a405-2ae7e46c0b58) |
+| Independent review | NOT RUN - awaiting affected-owner review |
 
 The 43 simulator cases are included in the 302 unit total. Dependencies were installed from
 the existing project ranges in an isolated environment; no dependency manifests or lockfiles
@@ -246,3 +247,5 @@ The persisted-example requirement remains an open acceptance gate, not an option
 - [Separate explanatory guide](guides/action-simulator-walkthrough.md)
 - Original supplied AI Layer Design Document, section 1.7 (linear budget/spend; constant conversion rate).
 - Repository tests: `apps/backend/tests/unit/ai/test_simulation.py`; exact results in section 14.
+- [Draft PR #33](https://github.com/HusseinElhaddad/Sawakli-AI/pull/33).
+- [Initial CI run](https://github.com/HusseinElhaddad/Sawakli-AI/actions/runs/42671542634): failed before jobs started, with GitHub internal server error. Subsequent CI state belongs to the PR evidence, not an inferred pass.
