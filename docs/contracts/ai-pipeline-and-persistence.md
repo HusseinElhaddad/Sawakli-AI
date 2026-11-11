@@ -146,6 +146,9 @@ recommendation FK resolution. AI-05's pure module can be built first; its stored
 acceptance is demonstrated when AI-06's adapter is available, without making its module
 depend on the orchestrator. FUT-05 arbitrary simulation requests remain out of scope.
 
+The AI-05 [action simulation contract](action-simulation.md) defines the explicit seven-day
+baseline input, proportional-v1 arithmetic, validation and deterministic public callable.
+
 ## 5. Transactions, retry and cancellation
 
 The Worker control boundary is `request_job_cancellation(organization_id, job_id)
