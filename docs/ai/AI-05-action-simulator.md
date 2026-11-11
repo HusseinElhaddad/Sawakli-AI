@@ -94,6 +94,11 @@ not evidence that a real campaign responds linearly.
 - **Testing:** Hand-calculated totals/ratios, zero denominators versus measured zero, fractional
   conversions, JSON round-trip and altered ambient precision are covered.
 
+The 11 November follow-up also pins all Context constructor settings instead of inheriting
+mutable DefaultContext. Assumptions are formatted within that same context. Regression tests
+exercise altered defaults before import in a separate process and ambient lowercase exponent
+formatting, in addition to precision and rounding. Scope, formulas and output fields are unchanged.
+
 ### Step 4 - Hand off to persistence without a dependency cycle
 
 - **What:** Make the module ready for AI-06 while preserving its ownership boundary.
@@ -218,6 +223,65 @@ were changed. Warnings are existing FastAPI/Starlette httpx and passlib crypt de
 No full-product E2E, stored simulation example, causal model accuracy, remote approval or merge
 is claimed by these local results.
 
+### 11 November branch review and localhost verification
+
+Reviewed clean branch `feat/ai-05-action-simulator` at `d49c593`, two commits ahead of
+`origin/main` (`9443642`), with no merge conflicts and draft PR #33. The user explicitly
+authorized fixes, builds, localhost testing and a merge after resolution. Human review remains
+required by repository governance; no approval is inferred from a green check.
+
+Two defects were reproduced on a temporary copy of the original source: altered Decimal
+DefaultContext could turn valid input into ContractError, and ambient lowercase exponent
+formatting could change assumptions text. The follow-up explicitly pins all numeric settings
+and formats assumptions inside the same context. Existing formulas, scenarios, tenant checks,
+output fields, layer ownership and persistence boundaries are preserved.
+
+Verification uses Python 3.12.3, Node 24.22.2 and PostgreSQL 18.6. Backend dependencies come
+from the committed `uv.lock` via `uv sync --frozen --extra dev`; frontend dependencies come
+from `npm ci`. No dependency manifest or lockfile is changed. Docker's daemon is unavailable,
+so native PostgreSQL binaries are extracted under `/tmp`, with separate test and migration
+round-trip servers on loopback ports 55434 and 55435. Test databases are disposable and are
+separate from the `sawakli_local` development database.
+
+| Command / check | Result |
+|---|---|
+| Original-source `python -m pytest tests/unit/ai/test_simulation.py -k 'ambient_decimal_context or decimal_defaults_before_import' -q` in a temporary copy with the new tests | FAIL - expected reproduction: two failures, one pass; assumptions mismatch and decimal.Inexact converted to ContractError |
+| Backend `.venv/bin/pytest tests/unit/ai/test_simulation.py -q` | PASS - 45 tests |
+| Root `apps/backend/.venv/bin/python -m pytest -c apps/backend/pyproject.toml apps/backend/tests -rs --junitxml=/tmp/sawakli-pytest-results.xml` with the two test DB URLs | PASS - 433 tests, zero failures/errors/skips; four existing deprecation warnings |
+| JUnit XML assertion for tests/failures/errors/skips | PASS - 433/0/0/0 |
+| Backend `.venv/bin/ruff check .` | PASS |
+| Backend `.venv/bin/ruff format --check .` | PASS - 177 files |
+| Backend `.venv/bin/mypy src` | PASS - 99 source files |
+| Root `node scripts/run-contracts.mjs`, with Node 24 and the backend venv on PATH | PASS - 6/6 commands, including 27 ARCH-03 and 23 QA-00 negative cases |
+| Root `python scripts/integration_harness.py fresh-db DATABASE_URL TEST_DATABASE_URL` with the backend venv | PASS - both disposable PostgreSQL databases recreated and migrated |
+| Root `python scripts/integration_harness.py roundtrip` with the backend venv | PASS - 23 tables at head, zero after downgrade, 23 after upgrade |
+| Backend `uv build --out-dir /tmp/sawakli-backend-dist` | PASS - source distribution and wheel built; existing missing backend README warning |
+| Frontend `npm run lint` | PASS - zero errors, two existing unused mock-organization argument warnings |
+| Frontend `npm run type-check` | PASS |
+| Frontend `npm run build` | PASS - production build; existing middleware deprecation warning |
+| Frontend `npm test` | PASS - three tests in two files |
+| Frontend `npm audit --json` | FAIL - 17 existing findings: eight moderate, six high, three critical; Next.js and Vitest updates need a separate scope decision |
+| `curl --fail http://localhost:3000/login` | PASS - HTTP 200; demo workspace entry present |
+| `curl --fail http://localhost:8000/health` | PASS - HTTP 200 with status ok |
+| `curl --fail http://localhost:8000/docs` and `/openapi.json` | PASS - HTTP 200 |
+| Worker process and `/tmp/worker_heartbeat` | PASS - heartbeat advances against the development database |
+| `git diff --check` | PASS |
+| `bash .github/scripts/check-documentation-governance.sh origin/main HEAD` | PASS |
+| Docker Compose build / integration | NOT RUN — Docker daemon stopped; native builds and PostgreSQL checks run instead |
+| Interactive browser verification | NOT RUN — browser access host unavailable |
+
+The first contract invocation lacked `python` on PATH; it failed closed with
+`spawnSync python ENOTDIR`. Adding the venv to PATH made the complete suite pass. The first
+post-fix lint invocation reported one 102-character string line; splitting the literal preserved
+the output and the rerun passed. The full backend suite was interrupted by the session restart;
+after recreating the two test databases, the resumed run passed all 433 tests in 157.55 seconds.
+
+Local testing: open `http://localhost:3000`, select **Open demo workspace**, then use the demo
+setup path. Real API registration/login and interactive API calls are available at
+`http://localhost:8000/docs`. The UI recommendation/simulation services still return mocks;
+this does not exercise the AI-05 calculator through HTTP. Use the focused Python tests above
+to exercise actual simulator calculations. Production persistence remains AI-06 work.
+
 ## 15. Known Limitations
 
 - Caller-provided baseline estimates and currency consistency are trusted inputs, not verified data quality.
@@ -225,6 +289,8 @@ is claimed by these local results.
 - Complete production run publication, API availability states and actual stored examples are absent.
 - ADR 0002's recorded status remains prepared for review; this task does not fabricate acceptance.
 - No live campaign updates, general simulation engine or additional model quality claims.
+- The existing frontend dependency tree has 17 npm audit findings at the 11 November review;
+  dependency security remediation is not included in this focused simulator fix.
 
 ## 16. Follow-Up Tasks
 

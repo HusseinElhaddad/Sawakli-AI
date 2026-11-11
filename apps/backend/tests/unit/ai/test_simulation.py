@@ -1,6 +1,9 @@
 """AI-05 arithmetic, explicit missing-data semantics and scope invariants."""
 
 import json
+import os
+import subprocess
+import sys
 from dataclasses import replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal, localcontext
@@ -150,13 +153,43 @@ def test_reordering_generators_and_multiple_rules_preserve_scoped_correlation():
     assert result[2].projections[0].projected_spend == 1120
 
 
-def test_ambient_decimal_context_does_not_change_results():
-    item = baseline(spend=Decimal("100.123456789"), conversions=Decimal(3))
+@pytest.mark.parametrize("spend", ["100.123456789", "1E+10"])
+def test_ambient_decimal_context_does_not_change_results(spend):
+    item = baseline(spend=Decimal(spend), conversions=Decimal(3))
     expected = run(item)
     with localcontext() as context:
         context.prec = 4
         context.rounding = "ROUND_DOWN"
+        context.capitals = 0
         assert run(item) == expected
+
+
+def test_decimal_defaults_before_import_do_not_change_results():
+    # A separate process exercises import-time context creation without changing
+    # the test runner's global Decimal defaults or reloading shared modules.
+    script = """
+import runpy
+import sys
+from decimal import DefaultContext, Decimal, Inexact
+
+DefaultContext.Emin = -3
+DefaultContext.Emax = 3
+DefaultContext.clamp = 1
+DefaultContext.traps[Inexact] = True
+helpers = runpy.run_path(sys.argv[1])
+item = helpers['baseline'](spend=Decimal('100.123456789'), conversions=Decimal(3))
+print(helpers['run'](item).model_dump_json())
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(Path(__file__).resolve())],
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    expected = run(baseline(spend=Decimal("100.123456789"), conversions=Decimal(3)))
+    assert SimulationBatch.model_validate_json(completed.stdout) == expected
 
 
 @pytest.mark.parametrize("field", ["spend", "conversions", "revenue"])

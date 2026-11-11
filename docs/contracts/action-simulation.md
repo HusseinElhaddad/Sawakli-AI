@@ -54,7 +54,10 @@ No saturation, attribution lag, auction change, seasonality or uncertainty model
 
 Expected conversions may be fractional. Compute in a local Decimal context with precision 28 and
 ROUND_HALF_EVEN; no integer rounding, binary float, clamp or two-decimal display rounding is
-applied. Arithmetic outside its exponent range raises ContractError, rather than returning an
+applied. The context explicitly pins exponent limits (-999999 through 999999), traps for invalid
+operations, division by zero, overflow and underflow, and uppercase exponent formatting. Neither
+mutable Decimal defaults before import nor the caller's ambient context changes calculations or
+assumptions text. Arithmetic outside its exponent range raises ContractError, rather than returning an
 infinite projection. The seven-day horizon must fit inside Python's date range.
 
 ## Missing, zero and undefined values

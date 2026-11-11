@@ -2,7 +2,17 @@
 
 from collections.abc import Iterable
 from datetime import date, timedelta
-from decimal import ROUND_HALF_EVEN, Context, Decimal, DecimalException, Underflow, localcontext
+from decimal import (
+    ROUND_HALF_EVEN,
+    Context,
+    Decimal,
+    DecimalException,
+    DivisionByZero,
+    InvalidOperation,
+    Overflow,
+    Underflow,
+    localcontext,
+)
 from typing import Literal
 from uuid import UUID
 
@@ -11,8 +21,17 @@ from sawakli.ai.recommendations.schemas import Recommendation
 
 from .schemas import SimulationBaseline
 
-_DECIMAL_CONTEXT = Context(prec=28, rounding=ROUND_HALF_EVEN)
-_DECIMAL_CONTEXT.traps[Underflow] = True
+# Specify every setting: omitted Context arguments inherit mutable DefaultContext.
+_DECIMAL_CONTEXT = Context(
+    prec=28,
+    rounding=ROUND_HALF_EVEN,
+    Emin=-999999,
+    Emax=999999,
+    capitals=1,
+    clamp=0,
+    flags=[],
+    traps=[InvalidOperation, DivisionByZero, Overflow, Underflow],
+)
 _SCENARIOS = (
     (Scenario.BUDGET_DECREASE_20, Decimal("0.80")),
     (Scenario.BUDGET_INCREASE_15, Decimal("1.15")),
@@ -99,24 +118,25 @@ def _simulate(baseline: SimulationBaseline, rule_id: str) -> SimulationBatch:
                     undefined_ratios=tuple(undefined),
                 )
             )
-    start, end = baseline.as_of + timedelta(days=1), baseline.as_of + timedelta(days=7)
-    return SimulationBatch(
-        organization_id=baseline.organization_id,
-        campaign_id=baseline.campaign_id,
-        rule_id=rule_id,
-        assumptions=(
-            "simulation_model:proportional-v1; heuristic preview, not validated causal lift.",
-            f"Seven-calendar-day totals: {start.isoformat()} through {end.isoformat()}; "
-            f"as_of={baseline.as_of.isoformat()}.",
-            f"Baseline source: {baseline.source}",
-            f"No-action baseline totals: spend={baseline.spend}, "
-            f"conversions={baseline.conversions}, revenue={baseline.revenue}.",
-            "Spend, expected conversions and revenue scale by 0.80, 1.15 or 0; "
-            "constant acquisition efficiency and value per conversion; no saturation or lag.",
-            "Same currency as canonical input; no currency conversion. "
-            "Expected conversions may be fractional; values use Decimal precision 28, half-even.",
-            "Undefined CPA/ROAS use numeric-zero sentinels with undefined_ratios markers; "
-            "display as unavailable, not measured zero. No external action is executed.",
-        ),
-        projections=tuple(projections),
-    )
+        start, end = baseline.as_of + timedelta(days=1), baseline.as_of + timedelta(days=7)
+        return SimulationBatch(
+            organization_id=baseline.organization_id,
+            campaign_id=baseline.campaign_id,
+            rule_id=rule_id,
+            assumptions=(
+                "simulation_model:proportional-v1; heuristic preview, not validated causal lift.",
+                f"Seven-calendar-day totals: {start.isoformat()} through {end.isoformat()}; "
+                f"as_of={baseline.as_of.isoformat()}.",
+                f"Baseline source: {baseline.source}",
+                f"No-action baseline totals: spend={baseline.spend}, "
+                f"conversions={baseline.conversions}, revenue={baseline.revenue}.",
+                "Spend, expected conversions and revenue scale by 0.80, 1.15 or 0; "
+                "constant acquisition efficiency and value per conversion; no saturation or lag.",
+                "Same currency as canonical input; no currency conversion. "
+                "Expected conversions may be fractional; "
+                "values use Decimal precision 28, half-even.",
+                "Undefined CPA/ROAS use numeric-zero sentinels with undefined_ratios markers; "
+                "display as unavailable, not measured zero. No external action is executed.",
+            ),
+            projections=tuple(projections),
+        )

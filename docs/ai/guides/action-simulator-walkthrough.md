@@ -206,7 +206,10 @@ Construct values from strings, such as Decimal("1.15"), rather than passing a bi
 
 Decimal arithmetic also has a context: precision, rounding and exceptional ranges. Another part
 of a Python process can change the ambient context. AI-05 pins its calculation to precision 28
-and ROUND_HALF_EVEN inside localcontext, so such a change does not alter its results.
+and ROUND_HALF_EVEN inside localcontext. It also explicitly pins exponent limits, error traps,
+clamping and exponent formatting, including while creating assumptions text. Python's Context
+constructor inherits omitted settings from mutable DefaultContext, so specifying only precision
+and rounding would still allow unrelated initialization code to change simulator behavior.
 
 No output is rounded to an integer conversion count or two display decimals. The API/UI can
 format results later while preserving the distinction between precision and presentation.
@@ -236,7 +239,8 @@ JSON fixture, successful calculation or fake repository test cannot stand in for
 
 ## 10. What was tested and why
 
-The focused suite covers 43 cases at delivery:
+The focused suite originally covered 43 cases; the follow-up adds coverage for import-time
+Decimal defaults and exponent formatting in the ambient context:
 
 - Known weekly totals and exact ratios, including internally scaled revenue.
 - The existing ARCH-03 illustrative projection numbers against real calculation.
