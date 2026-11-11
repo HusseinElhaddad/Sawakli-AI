@@ -299,6 +299,10 @@ to exercise actual simulator calculations. Production persistence remains AI-06 
 - API-05 / UI-07 - display stored previews with marked CPA/ROAS as unavailable.
 - WORK-04 - invoke the production AI-06 stage under existing lifecycle/cancellation contracts.
 - Affected owners - review the canonical calculation/input refinement and code/document consistency.
+- Frontend dependency security follow-up - on 11 November the user explicitly chose to keep
+  AI-05 focused. In a separate change, update vulnerable Next.js/Vitest and transitive packages,
+  assess major Vitest migration impact, rerun lint/types/build/tests and npm audit, and verify
+  the 17 reported findings are resolved. No dependency versions change in this PR.
 
 The persisted-example requirement remains an open acceptance gate, not an optional enhancement.
 
