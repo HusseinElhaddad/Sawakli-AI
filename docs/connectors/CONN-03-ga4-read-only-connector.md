@@ -58,21 +58,26 @@ Canonical tables (campaigns, daily_metrics, ga_events)
 
 ## 5. Inputs
 
-| Input | Type | Source | Notes |
-|-------|------|--------|-------|
-| `organization_id` | UUID | Auth token | Organization scope |
-| `data_source_id` | UUID | API route | Must belong to authenticated org |
-| `property_id` | str | User selection | GA4 property ID (e.g., "123456789") |
-| `access_token` | str | OAuth token store | Encrypted at rest, decrypted for API calls |
-| `start_date` | str | API parameter | YYYY-MM-DD format (defaults to 7 days ago) |
-| `end_date` | str | API parameter | YYYY-MM-DD format (defaults to today) |
+| Field / Input | Type | Required | Source | Description |
+|---|---|---|---|---|
+| `organization_id` | UUID | Yes | Auth token | Organization scope for tenant isolation |
+| `data_source_id` | UUID | Yes | API route | Must belong to authenticated org |
+| `property_id` | str | Yes | User selection | GA4 property ID (e.g., "123456789") |
+| `access_token` | str | Yes | OAuth token store | Encrypted at rest, decrypted for API calls |
+| `start_date` | str | No | API parameter | YYYY-MM-DD format (defaults to 7 days ago) |
+| `end_date` | str | No | API parameter | YYYY-MM-DD format (defaults to today) |
 
 ## 6. Outputs
 
-| Output | Type | Description |
-|--------|------|-------------|
-| `RawResponse` | dataclass | Contains `parsed_rows`, `row_count`, `parse_warnings` |
-| `ConnectorError` | dataclass | Contains `kind`, `message`, `user_message`, `retryable` |
+| Field / Output | Type | Nullable | Consumer | Description |
+|---|---|---|---|---|
+| `RawResponse.parsed_rows` | list[dict] | No | Data layer | Parsed analytics rows |
+| `RawResponse.row_count` | int | No | Data layer | Number of successfully parsed rows |
+| `RawResponse.parse_warnings` | list[str] | No | Data layer | Warnings for skipped rows |
+| `ConnectorError.kind` | str | No | Worker/API | Error classification for retry logic |
+| `ConnectorError.message` | str | No | Logging | Internal error details |
+| `ConnectorError.user_message` | str | No | UI | User-friendly error message |
+| `ConnectorError.retryable` | bool | No | Worker | Whether Worker should retry |
 
 ## 7. Rules and Semantics
 
