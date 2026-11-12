@@ -240,7 +240,7 @@ python -m pytest tests/unit/connectors/ga4/test_client.py -v
 
 **Result:** PASS — 16 passed in 0.09s
 
-## 14. Known Limitations and Blockers
+## 14. Known Limitations
 
 ### 1. Real GA4 API Integration: BLOCKED
 
