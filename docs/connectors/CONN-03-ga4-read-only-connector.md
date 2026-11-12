@@ -56,7 +56,64 @@ Canonical tables (campaigns, daily_metrics, ga_events)
 - API: Authenticate, validate org ownership, handle HTTP
 - Worker: Retry policy based on error.retryable flag
 
-## 5. Inputs
+## 5. Step-by-Step Implementation Walkthrough
+
+### Practical Outcome
+
+This task provides a GA4 connector path that can be exercised safely in development today through a
+mock client, while preserving the production contract shape expected by the connector and data
+layers. It also standardizes typed error behavior so API and Worker handling can remain consistent
+with existing connector semantics.
+
+### Acceptance Criteria → Steps and Evidence
+
+| Acceptance Criterion | Implementation Step(s) | Verification Evidence / Status |
+|---|---|---|
+| Return connector output in raw-response contract shape | Steps 1–3 | `python -m pytest tests/unit/connectors/ga4/test_client.py -v` — PASS |
+| Expose typed retryable vs non-retryable GA4 errors | Steps 1, 2 | `python -m pytest tests/unit/connectors/ga4/test_client.py -v` — PASS |
+| Keep development unblocked without external GA4 access | Step 1 | Mock-client unit coverage in `test_client.py` — PASS |
+| Document external blocker evidence without misreporting implementation state | Step 4 | Documentation review in this PR — PASS |
+
+### Step 1 — Implement Connector Clients
+
+- **What:** Add a mock GA4 client for deterministic local and CI behavior, and a real-client entry
+  point that returns a clear blocked status until external provisioning exists.
+- **Where:** `apps/backend/src/sawakli/connectors/ga4/client.py`
+- **How it works:** The connector validates required inputs, then routes through mock or real client
+  mode; real mode currently returns typed blocked behavior instead of pretending external readiness.
+- **Testing:** Unit tests validate required-token and required-property behavior and blocked real
+  client behavior.
+
+### Step 2 — Implement GA4 Parsing and Error Semantics
+
+- **What:** Convert GA4-style rows into canonical raw-response payloads and classify connector
+  errors for retry handling.
+- **Where:** `apps/backend/src/sawakli/connectors/ga4/parser.py`,
+  `apps/backend/src/sawakli/connectors/ga4/connector.py`
+- **How it works:** Parser-level validation filters malformed rows, records warnings, and returns
+  typed connector errors for empty or structurally invalid responses.
+- **Testing:** Unit tests validate successful parsing, malformed-date handling, metric constraints,
+  and empty/malformed response behavior.
+
+### Step 3 — Expose Connector Entry Points
+
+- **What:** Provide module-level GA4 entry points aligned to connector-layer usage.
+- **Where:** `apps/backend/src/sawakli/connectors/ga4/__init__.py`
+- **How it works:** Public exports provide one consistent import surface for connector usage and
+  tests, while keeping implementation details in dedicated modules.
+- **Testing:** Unit tests call public entry points and validate behavior across default and custom
+  date ranges.
+
+### Step 4 — Record Blockers and Operational Boundaries
+
+- **What:** Document real-integration prerequisites that are external to repository code ownership.
+- **Where:** This task document (`docs/connectors/CONN-03-ga4-read-only-connector.md`)
+- **How it works:** The document distinguishes implemented behavior from deferred external setup and
+  captures why CSV fallback remains operationally sufficient for current scope.
+- **Testing:** Documentation governance check validates required structure; connector tests verify
+  implemented behavior.
+
+## 6. Inputs
 
 | Field / Input | Type | Required | Source | Description |
 |---|---|---|---|---|
@@ -67,7 +124,7 @@ Canonical tables (campaigns, daily_metrics, ga_events)
 | `start_date` | str | No | API parameter | YYYY-MM-DD format (defaults to 7 days ago) |
 | `end_date` | str | No | API parameter | YYYY-MM-DD format (defaults to today) |
 
-## 6. Outputs
+## 7. Outputs
 
 | Field / Output | Type | Nullable | Consumer | Description |
 |---|---|---|---|---|
@@ -79,7 +136,7 @@ Canonical tables (campaigns, daily_metrics, ga_events)
 | `ConnectorError.user_message` | str | No | UI | User-friendly error message |
 | `ConnectorError.retryable` | bool | No | Worker | Whether Worker should retry |
 
-## 7. Rules and Semantics
+## 8. Rules and Semantics
 
 ### Error Classification
 
@@ -99,7 +156,7 @@ Canonical tables (campaigns, daily_metrics, ga_events)
 - Empty responses: Return `ConnectorError` (not empty `RawResponse`)
 - Malformed rows: Skipped with parse warnings (partial success allowed)
 
-## 8. Public Interfaces
+## 9. Public Interfaces
 
 ### Module: `sawakli.connectors.ga4`
 
@@ -131,7 +188,7 @@ class RealGA4Client:
     def fetch_report(...) -> dict[str, Any] | ConnectorError: ...
 ```
 
-## 9. Data Ownership
+## 10. Data Ownership
 
 ### Reads
 
@@ -152,14 +209,14 @@ class RealGA4Client:
 - Database tables (Data layer responsibility)
 - Unencrypted credentials to logs or errors
 
-## 10. Security
+## 11. Security
 
 - Access tokens encrypted at rest via AES-256-GCM (existing `oauth/crypto.py`)
 - Organization isolation enforced at API layer before calling connector
 - Error messages never expose token values or credentials
 - Safe user messages hide internal implementation details
 
-## 11. Error and Edge-Case Behavior
+## 12. Error and Edge-Case Behavior
 
 | Scenario | Behavior |
 |----------|----------|
@@ -170,7 +227,7 @@ class RealGA4Client:
 | bounces > sessions | Row skipped with warning |
 | All rows invalid | `ConnectorError(INVALID_RESPONSE_FORMAT, retryable=False)` |
 
-## 12. Testing
+## 13. Testing
 
 ### Unit Tests
 
@@ -210,7 +267,7 @@ Run: `pytest tests/unit/connectors/ga4/test_client.py -v`
 
 Not implemented — requires real GA4 property with traffic data (external blocker).
 
-## 13. Verification
+## 14. Verification
 
 ### Type Checking
 
@@ -240,7 +297,7 @@ python -m pytest tests/unit/connectors/ga4/test_client.py -v
 
 **Result:** PASS — 16 passed in 0.09s
 
-## 14. Known Limitations
+## 15. Known Limitations
 
 ### 1. Real GA4 API Integration: BLOCKED
 
@@ -280,7 +337,7 @@ No rate limit detection implemented in mock client. Real implementation would ne
 
 Token refresh is handled by existing `oauth/tokens.py` infrastructure but not integrated into GA4 connector flow. API layer responsible for refreshing near-expiry tokens before calling connector.
 
-## 15. Follow-Up Tasks
+## 16. Follow-Up Tasks
 
 1. **External Setup (Blocked):**
    - Create Google Cloud project with Analytics Data API enabled
@@ -311,7 +368,7 @@ Token refresh is handled by existing `oauth/tokens.py` infrastructure but not in
    - Connection status indicator
    - Error message display
 
-## 16. References and Evidence
+## 17. References and Evidence
 
 - **Contract:** [docs/contracts/raw-response-canonical-handoff.md](../contracts/raw-response-canonical-handoff.md)
 - **Architecture:** [docs/architecture/ARCH-04-connector-to-data-handoff-contracts.md](../architecture/ARCH-04-connector-to-data-handoff-contracts.md)
