@@ -20,6 +20,7 @@ const COMMANDS = [
   'tests/contracts/validate-ui-types.mjs',
   'tests/contracts/validate-backend-models.mjs',
   'tests/contracts/validate-ai-schemas.mjs',
+  'tests/contracts/validate-ai-pipeline.mjs',
   'tests/contracts/test-deliberate-mismatch.mjs',
 ]
 
@@ -32,6 +33,7 @@ const rows = COMMANDS.map((script) => {
   const caught = lines.filter((l) => l.startsWith('PASS') && !l.includes('real files')).length
   const detail = pass
     ? lines.find((l) => l.startsWith('Accepted known deviations')) ??
+      lines.find((l) => l.startsWith('PASS ARCH-03:')) ??
       (caught ? `${caught} injected mismatch case(s) caught; real contract files unchanged` : 'no deviations')
     : lines.filter((l) => /^(x |✗|FAIL|Validator error)/.test(l)).slice(0, 3).join('; ') || `exit ${run.status}`
   return { command: `node ${script}`, result: pass ? 'PASS' : 'FAIL', detail }

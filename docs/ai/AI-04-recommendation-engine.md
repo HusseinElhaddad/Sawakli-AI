@@ -8,8 +8,11 @@ the AI pipeline: AI-01 measures, AI-02 flags statistical outliers, AI-03 project
 AI-04 decides whether any of that adds up to a real, explainable business problem worth a card.
 
 AI-03 forecasts are consumed directly via its real, public `ForecastRecord` / `ModelUsed` types
-(`sawakli.ai.forecasting`). AI-02 has not shipped; `AnomalySignal` is this task's own typed
-stand-in until it does.
+(`sawakli.ai.forecasting`). AI-02 is merged, but its campaign-day diagnostic differs from
+`AnomalySignal`. ARCH-03 supplies an explicit-evidence adapter and a
+[reviewable integration contract](../contracts/ai-pipeline-and-persistence.md).
+AI-06 still needs to extract metric evidence and wire that adapter into production.
+References below to pre-AI-02 fixtures describe the original implementation checkpoint.
 
 It implements the merged 1.6 (Recommendation Engine) and 1.8 (Explainability Formatter)
 functionality from the original AI Layer design document, as a single task per the current Notion
@@ -51,7 +54,7 @@ board and 4-session schedule.
 | Task / Contract | Status |
 |---|---|
 | AI-01 — Data Access and Feature Engineering | Complete and merged (commit `32d027349330e91217c82d83a275bcdeb643abac`). Sole source of input data (`FeatureRecord`). |
-| AI-02 — Anomaly Detection Module | Not started. This task uses a typed stand-in instead (Section 4); see Section 14 for the resulting limitation. |
+| AI-02 — Anomaly Detection Module | Merged. AI-06 must use ARCH-03's explicit-metric-evidence adapter; direct diagnostic-to-signal conversion is invalid. |
 | AI-03 — Forecasting Module | Complete and merged (PR #14, commits `acc0493`–`844f296`). This task imports AI-03's real `ForecastRecord` / `ModelUsed` directly (Section 4). |
 | INT-01 — Canonical MVP Contract Pack, Section 1.3 / 4.2 / 4.3 | Defines the exact `anomalies` and `recommendations` table columns, naming, and enum casing used throughout this task. |
 | `alembic/versions/0004_ai_layer_tables.py` | The applied migration creating the `anomalies` table — the canonical shape `AnomalySignal` is built against. |

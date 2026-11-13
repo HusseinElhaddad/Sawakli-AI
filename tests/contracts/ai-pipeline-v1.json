@@ -1,0 +1,415 @@
+{
+  "contract_version": "ai-pipeline-v1",
+  "description": "Synthetic illustrative contract fixtures, not measured model predictions or database execution evidence.",
+  "cases": [
+    {
+      "name": "normal_contract_example",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000c9",
+        "model_run_id": "00000000-0000-0000-0000-00000000012d",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000c9",
+        "model_run_id": "00000000-0000-0000-0000-00000000012d",
+        "status": "SUCCESS",
+        "campaigns_analyzed": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "warnings": [],
+        "error_code": null,
+        "retryable": false
+      },
+      "raw_metrics": [
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-15",
+          "spend": "100",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        },
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-16",
+          "spend": "100",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        },
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-17",
+          "spend": "100",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        },
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-18",
+          "spend": "100",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        },
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-19",
+          "spend": "100",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        },
+        {
+          "organization_id": "00000000-0000-0000-0000-000000000001",
+          "campaign_id": "00000000-0000-0000-0000-000000000065",
+          "campaign_name": "Synthetic ARCH-03 campaign",
+          "platform": "meta",
+          "date": "2026-10-20",
+          "spend": "400",
+          "impressions": 1000,
+          "clicks": 50,
+          "conversions": 5,
+          "revenue": "300"
+        }
+      ],
+      "metric_evidence": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "campaign_id": "00000000-0000-0000-0000-000000000065",
+        "observed_on": "2026-10-20",
+        "metric_name": "cpa",
+        "current_value": "80",
+        "baseline_median": "20",
+        "historical_count": 5,
+        "z_contribution": "1",
+        "iqr_contribution": "1"
+      },
+      "simulation_batch": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "campaign_id": "00000000-0000-0000-0000-000000000065",
+        "rule_id": "cpa_spike",
+        "horizon_days": 7,
+        "assumptions": [
+          "Illustrative seven-day totals; constant daily baseline spend 100, conversions 5, revenue 300.",
+          "For this fixture only, spend, conversions and revenue scale linearly; these are not model predictions."
+        ],
+        "projections": [
+          {
+            "scenario_type": "budget_decrease_20",
+            "projected_spend": "560",
+            "projected_conversions": "28",
+            "projected_cpa": "20",
+            "projected_roas": "3",
+            "undefined_ratios": []
+          },
+          {
+            "scenario_type": "budget_increase_15",
+            "projected_spend": "805",
+            "projected_conversions": "40.25",
+            "projected_cpa": "20",
+            "projected_roas": "3",
+            "undefined_ratios": []
+          },
+          {
+            "scenario_type": "pause",
+            "projected_spend": "0",
+            "projected_conversions": "0",
+            "projected_cpa": "0",
+            "projected_roas": "0",
+            "undefined_ratios": [
+              "cpa",
+              "roas"
+            ]
+          }
+        ]
+      },
+      "persisted_rows": {
+        "forecasts": [
+          {
+            "model_run_id": "00000000-0000-0000-0000-00000000012d",
+            "organization_id": "00000000-0000-0000-0000-000000000001",
+            "campaign_id": "00000000-0000-0000-0000-000000000065",
+            "created_at": "2026-10-20T12:00:00Z",
+            "id": "00000000-0000-0000-0000-0000000002bd",
+            "metric_name": "spend",
+            "forecast_date": "2026-10-27",
+            "value": "100",
+            "ci_lower": "90",
+            "ci_upper": "110",
+            "model_used": "moving_average"
+          }
+        ],
+        "anomalies": [
+          {
+            "model_run_id": "00000000-0000-0000-0000-00000000012d",
+            "organization_id": "00000000-0000-0000-0000-000000000001",
+            "campaign_id": "00000000-0000-0000-0000-000000000065",
+            "created_at": "2026-10-20T12:00:00Z",
+            "id": "00000000-0000-0000-0000-000000000191",
+            "metric_name": "cpa",
+            "detected_at": "2026-10-20T00:00:00Z",
+            "anomaly_score": "0.86",
+            "severity": "high",
+            "direction": "above",
+            "detectors_triggered": {
+              "score_scope": "campaign_day",
+              "observed_on": "2026-10-20",
+              "baseline": "20",
+              "current": "80",
+              "z_contribution": "1",
+              "iqr_contribution": "1"
+            }
+          }
+        ],
+        "recommendations": [
+          {
+            "model_run_id": "00000000-0000-0000-0000-00000000012d",
+            "organization_id": "00000000-0000-0000-0000-000000000001",
+            "campaign_id": "00000000-0000-0000-0000-000000000065",
+            "created_at": "2026-10-20T12:00:00Z",
+            "id": "00000000-0000-0000-0000-0000000001f5",
+            "source_anomaly_id": "00000000-0000-0000-0000-000000000191",
+            "problem": "CPA is higher than the earlier baseline",
+            "evidence": [
+              "CPA 80 versus baseline 20",
+              "rule_id:cpa_spike",
+              "Illustrative seven-day totals; constant daily baseline spend 100, conversions 5, revenue 300.",
+              "For this fixture only, spend, conversions and revenue scale linearly; these are not model predictions.",
+              "undefined_ratios:pause:cpa,roas"
+            ],
+            "suggested_action": "Review spend and compare bounded budget scenarios",
+            "confidence_score": "0.8",
+            "risk_rating": "medium",
+            "severity": 4,
+            "status": "pending"
+          }
+        ],
+        "action_simulations": [
+          {
+            "id": "00000000-0000-0000-0000-000000000259",
+            "recommendation_id": "00000000-0000-0000-0000-0000000001f5",
+            "created_at": "2026-10-20T12:00:00Z",
+            "scenario_type": "budget_decrease_20",
+            "projected_spend": "560",
+            "projected_conversions": "28",
+            "projected_cpa": "20",
+            "projected_roas": "3"
+          },
+          {
+            "id": "00000000-0000-0000-0000-00000000025a",
+            "recommendation_id": "00000000-0000-0000-0000-0000000001f5",
+            "created_at": "2026-10-20T12:00:00Z",
+            "scenario_type": "budget_increase_15",
+            "projected_spend": "805",
+            "projected_conversions": "40.25",
+            "projected_cpa": "20",
+            "projected_roas": "3"
+          },
+          {
+            "id": "00000000-0000-0000-0000-00000000025b",
+            "recommendation_id": "00000000-0000-0000-0000-0000000001f5",
+            "created_at": "2026-10-20T12:00:00Z",
+            "scenario_type": "pause",
+            "projected_spend": "0",
+            "projected_conversions": "0",
+            "projected_cpa": "0",
+            "projected_roas": "0"
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty_workspace",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000ca",
+        "model_run_id": "00000000-0000-0000-0000-00000000012e",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000ca",
+        "model_run_id": "00000000-0000-0000-0000-00000000012e",
+        "status": "SUCCESS",
+        "campaigns_analyzed": [],
+        "warnings": [
+          "no_data"
+        ],
+        "error_code": null,
+        "retryable": false
+      },
+      "persisted_rows": {
+        "forecasts": [],
+        "anomalies": [],
+        "recommendations": [],
+        "action_simulations": []
+      }
+    },
+    {
+      "name": "insufficient_history",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cb",
+        "model_run_id": "00000000-0000-0000-0000-00000000012f",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cb",
+        "model_run_id": "00000000-0000-0000-0000-00000000012f",
+        "status": "SUCCESS",
+        "campaigns_analyzed": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "warnings": [
+          "insufficient_history"
+        ],
+        "error_code": null,
+        "retryable": false
+      },
+      "persisted_rows": {
+        "forecasts": [],
+        "anomalies": [],
+        "recommendations": [],
+        "action_simulations": []
+      }
+    },
+    {
+      "name": "cancelled_before_publication",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cc",
+        "model_run_id": "00000000-0000-0000-0000-000000000130",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cc",
+        "model_run_id": "00000000-0000-0000-0000-000000000130",
+        "status": "CANCELLED",
+        "campaigns_analyzed": [],
+        "warnings": [],
+        "error_code": "cancelled",
+        "retryable": false
+      },
+      "persisted_rows": {
+        "forecasts": [],
+        "anomalies": [],
+        "recommendations": [],
+        "action_simulations": []
+      }
+    },
+    {
+      "name": "retryable_storage_failure",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cd",
+        "model_run_id": "00000000-0000-0000-0000-000000000131",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000cd",
+        "model_run_id": "00000000-0000-0000-0000-000000000131",
+        "status": "FAILED",
+        "campaigns_analyzed": [],
+        "warnings": [],
+        "error_code": "storage_failed",
+        "retryable": true
+      },
+      "persisted_rows": {
+        "forecasts": [],
+        "anomalies": [],
+        "recommendations": [],
+        "action_simulations": []
+      }
+    },
+    {
+      "name": "invalid_input",
+      "request": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000ce",
+        "model_run_id": "00000000-0000-0000-0000-000000000132",
+        "as_of": "2026-10-20",
+        "campaign_ids": [
+          "00000000-0000-0000-0000-000000000065"
+        ],
+        "contract_version": "ai-pipeline-v1"
+      },
+      "outcome": {
+        "organization_id": "00000000-0000-0000-0000-000000000001",
+        "job_id": "00000000-0000-0000-0000-0000000000ce",
+        "model_run_id": "00000000-0000-0000-0000-000000000132",
+        "status": "FAILED",
+        "campaigns_analyzed": [],
+        "warnings": [],
+        "error_code": "invalid_input",
+        "retryable": false
+      },
+      "persisted_rows": {
+        "forecasts": [],
+        "anomalies": [],
+        "recommendations": [],
+        "action_simulations": []
+      }
+    }
+  ],
+  "evaluation": {
+    "benchmark": "ai02-reference-v1",
+    "threshold": "0.80",
+    "seeds": [
+      20261015,
+      20261016
+    ],
+    "rows_per_seed": 5400,
+    "events_per_seed": 30,
+    "anomaly_days_per_seed": 152,
+    "clean_days_per_seed": 5248,
+    "clean_campaigns_per_seed": 30,
+    "development_digest": "4533a170f07e361b9e9fc77528aa56822fb07fae58a00e1aa1cd7828ee00ad62",
+    "validation_digest": "414d813add890129a32d26af6ffe5ee444288eed261cc985de88dbd55ca66aee"
+  }
+}

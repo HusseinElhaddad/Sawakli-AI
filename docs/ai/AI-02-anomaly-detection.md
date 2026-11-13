@@ -2,6 +2,12 @@
 
 ## 1. Overview
 
+**23 October integration handoff:** ARCH-03 now supplies a pure, explicit-evidence
+adapter and [contract v1](../contracts/ai-pipeline-and-persistence.md), prepared for
+affected-owner review. AI-02's algorithm and diagnostic shape are unchanged. AI-06
+must expose actual metric contributions and wire the adapter; no production
+pipeline or per-metric model-quality result is claimed by this handoff.
+
 AI-02 consumes AI-01 `FeatureRecord` histories and returns one immutable
 `AnomalyResult` per organization/campaign/day. It combines robust Z-score, IQR
 and Isolation Forest evidence into a score, severity, performance direction and
