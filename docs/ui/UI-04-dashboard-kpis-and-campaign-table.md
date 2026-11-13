@@ -433,6 +433,14 @@ Results:
   - Backend: **PASS**
   - Frontend: **PASS**
   - Integration: **PASS**
+- **Re-run after the 12 Nov 2026 review** (13 Nov 2026, local Windows machine, Node v24.19.0),
+  after merging `main` `261a9ba` and converting
+  [UI-02](UI-02-ui-foundation-and-api-client.md) to the 17-section format. No code changed.
+  - `npm ci`, `npm run lint` (0 errors, 1 pre-existing warning), `npm run type-check`, `npm test`
+    (13 files, 83 tests), `npm run build` → **PASS**.
+  - `node scripts/run-contracts.mjs` → **PASS** (6/6; `main` added the ARCH-03 AI-pipeline
+    validator).
+  - Documentation governance against `origin/main` → **PASS** (UI-02 and UI-04 included).
 
 ## 15. Known Limitations
 
