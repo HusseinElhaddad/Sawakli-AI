@@ -1,183 +1,112 @@
 'use client'
 
+import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import {
-  AlertCircle,
-  ArrowRight,
-  BarChart3,
-  CheckCircle2,
-  FileSpreadsheet,
-  FileUp,
-  Link2,
-  Plug,
-  ShieldCheck,
-  UploadCloud,
-} from 'lucide-react'
-import { setSession, DEMO_SESSION, getSession } from '@/lib/mock-auth'
-import { setupCsvSource, uploadCsv } from '@/services/connectors.service'
+import { AlertCircle, ArrowRight, CheckCircle2, Download, FileSpreadsheet, FileUp, Plug, UploadCloud } from 'lucide-react'
+import { ApiError } from '@/lib/api-client'
+import { getSession } from '@/lib/session'
+import { createCsvConnector, uploadCsv } from '@/services/connectors.service'
+import type { CsvUploadResponse } from '@/types'
 
-type SourceChoice = 'demo' | 'csv' | 'ga4' | 'google-ads' | null
+function formatFileSize(size: number): string {
+  return size < 1024 * 1024 ? `${Math.ceil(size / 1024)} KB` : `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
 
-const CONNECTORS = [
-  { id: 'ga4', name: 'Google Analytics 4', detail: 'OAuth connection', icon: BarChart3 },
-  { id: 'google-ads', name: 'Google Ads', detail: 'OAuth connection', icon: Link2 },
-] as const
+function formatSyncedAt(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
 
 export default function ConnectorSetupPage() {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [source, setSource] = useState<SourceChoice>(null)
-  const [fileName, setFileName] = useState('')
-  const [fileSize, setFileSize] = useState<number | null>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [dataSourceId, setDataSourceId] = useState<string | null>(null)
+  const [result, setResult] = useState<CsvUploadResponse | null>(null)
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [statusMessage, setStatusMessage] = useState('')
+  const [uploading, setUploading] = useState(false)
 
-  function handleFile(file: File | undefined) {
+  function selectFile(candidate: File | undefined) {
     setError('')
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setFileName('')
-      setFileSize(null)
-      setSource(null)
+    setResult(null)
+    if (!candidate) return
+    if (!candidate.name.toLowerCase().endsWith('.csv')) {
+      setFile(null)
       setError('Choose a CSV file to continue.')
       return
     }
-    setFileName(file.name)
-    setFileSize(file.size)
-    setSource('csv')
+    setFile(candidate)
   }
 
-  async function continueToDashboard() {
-    if (!source) {
-      setError('Choose demo data or select a CSV before continuing.')
+  async function handleUpload() {
+    if (!file) {
+      setError('Choose a CSV file before uploading.')
       return
     }
-    if (source === 'ga4' || source === 'google-ads') {
-      setError('OAuth authorization for this connector is not available yet. Choose demo data or CSV to continue.')
-      return
-    }
-    if (source === 'csv') {
-      const session = getSession()
-      if (!session || !fileName) {
-        setError('Your session or selected CSV is missing. Please start again.')
-        return
-      }
-      const fileInput = inputRef.current
-      const file = fileInput?.files?.[0]
-      if (!file) {
-        setError('Choose the CSV file again before continuing.')
-        return
-      }
-      setError('')
-      setLoading(true)
-      setStatusMessage('Uploading and importing your CSV...')
-      try {
-        const setup = await setupCsvSource(session.access_token)
-        const result = await uploadCsv(session.access_token, setup.data_source_id, file)
-        setStatusMessage(`Imported ${result.row_count} rows successfully.`)
-        router.push('/dashboard')
-      } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : 'CSV import failed. Please try again.')
-        setStatusMessage('')
-      } finally {
-        setLoading(false)
-      }
-      return
-    }
-    if (!getSession()) setSession(DEMO_SESSION)
-    router.push('/dashboard')
-  }
 
-  function chooseDemo() {
+    const session = getSession()
+    if (!session) {
+      router.push('/login')
+      return
+    }
+
     setError('')
-    setFileName('')
-    setFileSize(null)
-    setSource('demo')
-  }
-
-  function chooseConnector(connector: 'ga4' | 'google-ads') {
-    setError('')
-    setFileName('')
-    setFileSize(null)
-    setSource(connector)
+    setUploading(true)
+    try {
+      const sourceId = dataSourceId ?? (await createCsvConnector(session.access_token)).data_source_id
+      setDataSourceId(sourceId)
+      setResult(await uploadCsv(session.access_token, sourceId, file))
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'The upload could not be completed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
-    <div className="setup-shell setup-shell-wide">
-      <div className="setup-step"><Plug /> Step 2 of 2</div>
+    <div className="auth-card auth-card-wide">
+      <div className="setup-step"><Plug /> Step 2 of 2 · optional</div>
+      <h1>Upload marketing data</h1>
+      <p className="auth-lede">Upload a CSV to import campaign data safely. Sawakli never asks for provider passwords or tokens here.</p>
+      {error && <div className="error-alert" role="alert"><AlertCircle />{error}</div>}
 
-      <h1>Bring in your marketing data</h1>
-      <p className="setup-lede">Start with safe demo data or import a CSV. OAuth connectors will return here with a connection status after authorization.</p>
-
-      {error && <div className="error-alert" role="alert"><AlertCircle /> {error}</div>}
-
-      <div className="source-list">
-        {CONNECTORS.map(({ id, name, detail, icon: Icon }) => (
-          <button
-            type="button"
-            className={`source-row source-choice ${source === id ? 'selected' : ''}`}
-            key={name}
-            onClick={() => chooseConnector(id)}
-          >
-            <div className="source-icon"><Icon /></div>
-            <div className="source-copy">
-              <strong>{name}</strong>
-              <span>{detail}</span>
-            </div>
-            <span className={`source-status ${source === id ? 'selected-status' : ''}`}>
-              {source === id ? <CheckCircle2 /> : <span className="status-dot" />}
-              {source === id ? 'Selected' : 'Available'}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <div className="setup-divider"><span>or use the demo path</span></div>
-
-      <button type="button" className={`demo-choice ${source === 'demo' ? 'selected' : ''}`} onClick={chooseDemo}>
-        <div className="demo-choice-icon"><FileSpreadsheet /></div>
-        <span><strong>Load Sawakli demo data</strong><small>Explore the workspace with a prepared campaign dataset.</small></span>
-        {source === 'demo' && <CheckCircle2 className="choice-check" />}
-      </button>
-
-      <div className={`upload-zone ${source === 'csv' ? 'selected' : ''}`}>
-        <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={(event) => handleFile(event.target.files?.[0])} hidden />
-        {source === 'csv' ? <FileUp className="upload-icon" /> : <UploadCloud className="upload-icon" />}
-        {fileName ? (
-          <>
-            <strong>{fileName}</strong>
-            <span>{formatFileSize(fileSize ?? 0)} · Ready to import</span>
-          </>
-        ) : (
-          <>
-            <strong>Import a CSV file</strong>
-            <span>Campaign metrics stay in your workspace scope.</span>
-          </>
-        )}
-        <button type="button" className="btn btn-secondary upload-button" onClick={() => inputRef.current?.click()}>
-          {fileName ? 'Choose another file' : 'Choose CSV'}
+      <section aria-labelledby="csv-upload-title" className="connector-section">
+        <div className="connector-heading"><FileSpreadsheet /><div><h2 id="csv-upload-title">CSV import</h2><p>Supported now: secure parsing, raw evidence, and canonical data import.</p></div></div>
+        <div className="csv-template">
+          <div>
+            <strong>Need a template?</strong>
+            <p>Use the approved sample with date, campaign name, platform, spend, impressions, clicks, conversions, and revenue.</p>
+          </div>
+          <a className="btn btn-secondary" href="/samples/sawakli-campaign-data.csv" download>
+            <Download /> Download sample CSV
+          </a>
+        </div>
+        <input aria-label="CSV file" ref={inputRef} className="sr-only" id="csv-file" type="file" accept=".csv,text/csv" onChange={(event) => selectFile(event.target.files?.[0])} />
+        <button className="upload-zone" type="button" onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {file ? <FileUp /> : <UploadCloud />}
+          <span><strong>{file ? file.name : 'Choose a CSV file'}</strong><small>{file ? `${formatFileSize(file.size)} · ready to import` : 'CSV files only'}</small></span>
         </button>
-      </div>
+        <button className="btn btn-primary auth-submit" type="button" onClick={handleUpload} disabled={uploading || !file}>
+          <UploadCloud />{uploading ? 'Uploading and importing…' : 'Upload and import CSV'}
+        </button>
+      </section>
 
-      <div className="safe-note"><ShieldCheck /><span>No API keys or provider tokens are requested on this screen. Selected connectors still require OAuth authorization.</span></div>
+      {result && (
+        <section className="upload-result" aria-live="polite">
+          <CheckCircle2 />
+          <div><h2>CSV imported</h2><p>{result.row_count} rows were imported{result.parse_warnings.length ? ` with ${result.parse_warnings.length} warning(s)` : '.'}</p></div>
+          {result.parse_warnings.length > 0 && <ul>{result.parse_warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
+          <p className="status-note">Sync status: {result.sync_status}. Last synced: {formatSyncedAt(result.last_synced_at)}. Dashboard cards remain demo data until API-02/UI-04 use canonical metrics.</p>
+        </section>
+      )}
 
-      {statusMessage && <div className="safe-note" role="status"><CheckCircle2 /><span>{statusMessage}</span></div>}
-
-      <button type="button" onClick={continueToDashboard} disabled={loading} className="btn btn-primary setup-submit" style={{ opacity: loading ? 0.65 : 1 }}>
-        {loading ? <UploadCloud className="spin" /> : <ArrowRight />}
-        {loading ? 'Importing...' : 'Continue to workspace'}
-      </button>
-
-      <p className="setup-back"><Link href="/setup/organization">Back to workspace setup</Link></p>
+      <section className="connector-unavailable" aria-label="Unavailable connectors"><strong>OAuth connectors</strong><span>Google Ads and GA4 authorization are unavailable until the Connector layer provides a real provider flow.</span></section>
+      <button className="btn btn-primary auth-submit" type="button" onClick={() => router.push('/dashboard')} disabled={result?.sync_status !== 'success'}><ArrowRight />Continue to demo dashboard</button>
+      <button className="btn btn-secondary auth-submit" type="button" onClick={() => router.push('/dashboard')} disabled={uploading}>Skip for now</button>
+      <p className="auth-footer"><Link href="/setup/organization">Back to workspace setup</Link></p>
     </div>
   )
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

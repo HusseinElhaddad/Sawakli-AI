@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Lightbulb } from 'lucide-react'
 import { useRecommendations } from '@/hooks/useRecommendations'
-import { getSession } from '@/lib/mock-auth'
+import { getSession } from '@/lib/session'
 import type { Recommendation } from '@/types'
 
 function statusBadge(status: string) {

@@ -31,6 +31,7 @@ Important technical information must be maintained here, not only in Notion or a
 - [QA-00 contract validators and integration harness](testing/QA-00-contract-validators-and-integration-harness.md)
 - [CONN-01 connector package and CSV/demo parser](connectors/CONN-01-csv-demo-parser.md)
 - [CONN-02 OAuth token security and connection health](connectors/CONN-02-oauth-token-security.md)
+- [UI-04 dashboard KPI cards and campaign table](ui/UI-04-dashboard-kpis-and-campaign-table.md)
 - [Release and demo checklist](testing/release-checklist.md)
 
 ## Categories

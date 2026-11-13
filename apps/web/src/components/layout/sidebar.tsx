@@ -12,7 +12,7 @@ import {
   Brain,
   User,
 } from 'lucide-react'
-import { getSession } from '@/lib/mock-auth'
+import { getSession } from '@/lib/session'
 import { useRecommendations } from '@/hooks/useRecommendations'
 import styles from './sidebar.module.css'
 

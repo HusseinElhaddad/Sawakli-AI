@@ -2,41 +2,32 @@ export type CampaignPlatform = 'meta' | 'google'
 
 export type CampaignStatus = 'active' | 'paused' | 'removed' | 'unknown'
 
-export type HealthStatus = 'strong' | 'average' | 'weak'
-
+// Mirrors API-02 CampaignPublic (apps/backend/src/sawakli/api/schemas/campaigns.py).
+// organization_id is optional because CampaignPublic does not return it (UI-04 contract gap G2);
+// it stays listed so the QA-01 UI validator keeps the canonical field set.
 export type Campaign = {
   id: string
-  organization_id: string
+  organization_id?: string
   name: string
   platform: CampaignPlatform
-  objective: string
-  status: CampaignStatus
-  budget?: number
-  start_date?: string
-  end_date?: string
-  spend: number
-  clicks: number
-  conversions: number
-  ctr: number
-  cpc: number
-  cpa: number
-  roas: number
-  health_status: HealthStatus
+  objective: string | null
+  status: CampaignStatus | null
+  budget: number | null
+  start_date: string | null
+  end_date: string | null
 }
 
-export type TimeSeriesPoint = {
+// Mirrors API-02 DailyMetricPublic (apps/backend/src/sawakli/api/schemas/metrics.py).
+// Ratios are fractions (0.025 = 2.5%) and null when their denominator is 0.
+export type DailyMetric = {
   date: string
   spend: number
+  revenue: number
   clicks: number
+  impressions: number
   conversions: number
-  cpa: number
-  roas: number
-  ctr: number
-}
-
-export type CampaignDetails = {
-  campaign: Campaign
-  time_series: TimeSeriesPoint[]
-  related_anomalies: import('./anomaly').Anomaly[]
-  related_recommendations: import('./recommendation').Recommendation[]
+  ctr: number | null
+  cpc: number | null
+  cpa: number | null
+  roas: number | null
 }

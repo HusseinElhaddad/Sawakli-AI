@@ -1,0 +1,4 @@
+date,campaign_name,platform,spend,impressions,clicks,conversions,revenue,sessions,bounces
+2026-08-29,Summer Campaign,meta,100.00,1000,100,10,200.00,500,100
+2026-08-30,Summer Campaign,meta,50.00,500,50,5,100.00,300,60
+2026-08-29,Search Campaign,google,75.00,750,75,8,150.00,400,80

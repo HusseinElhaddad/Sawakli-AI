@@ -1,125 +1,54 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { AlertCircle, ArrowRight, Building2, LoaderCircle } from 'lucide-react'
-import { login, register } from '@/services/auth.service'
-import { setSession } from '@/lib/mock-auth'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { AlertCircle, ArrowRight, Building2 } from 'lucide-react'
+import { ApiError } from '@/lib/api-client'
+import { setSession } from '@/lib/session'
+import { login, readMe, register } from '@/services/auth.service'
 
 export default function OrganizationSetupPage() {
   const router = useRouter()
   const [name, setName] = useState('')
+  const [organizationName, setOrganizationName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [orgName, setOrgName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  async function handleContinue(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      const response = await register(name, email, password, orgName)
-      const sessionResponse = await login(email, password)
-      setSession({
-        user: sessionResponse.user,
-        organization: response.organization,
-        access_token: sessionResponse.access_token,
-      })
+      await register(name.trim(), email.trim(), password, organizationName.trim())
+      const session = await login(email.trim(), password)
+      const currentUser = await readMe(session.access_token)
+      setSession({ ...currentUser, access_token: session.access_token })
       router.push('/setup/connector')
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Workspace setup failed. Please try again.')
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'We could not create your workspace. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: 480,
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '40px 32px',
-        background: 'var(--color-surface)',
-        boxShadow: 'var(--shadow-md)',
-      }}
-    >
-      <div
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          borderRadius: 4,
-          padding: '4px 10px',
-          fontSize: 12,
-          fontWeight: 'var(--font-weight-semibold)',
-          background: 'var(--color-accent-light)',
-          color: 'var(--color-accent)',
-          marginBottom: 16,
-        }}
-      >
-        <Building2 style={{ width: 14, height: 14 }} />
-        Step 1 of 2
-      </div>
-
-      <h1 style={{ fontSize: 18, fontWeight: 'var(--font-weight-bold)', marginBottom: 4 }}>
-        Create your organization
-      </h1>
-      <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 28 }}>
-        Create an account and its first workspace. You can import demo data next.
-      </p>
-
-      {error && (
-        <div className="error-alert" role="alert">
-          <AlertCircle />
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleContinue}>
-        <div className="form-group">
-          <label htmlFor="name" className="form-label">Your name</label>
-          <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required className="form-input" autoComplete="name" />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="email" className="form-label">Work email</label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="form-input" autoComplete="email" />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="password" className="form-label">Password</label>
-          <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="form-input" autoComplete="new-password" />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="orgName" className="form-label">Organization name</label>
-          <input
-            id="orgName"
-            type="text"
-            value={orgName}
-            onChange={(e) => setOrgName(e.target.value)}
-            required
-            className="form-input"
-          />
-        </div>
-
-        <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: loading ? 0.65 : 1 }}>
-          {loading ? <LoaderCircle className="spin" /> : <ArrowRight />}
-          {loading ? 'Creating workspace...' : 'Create workspace'}
-        </button>
+    <div className="auth-card">
+      <div className="setup-step"><Building2 /> Step 1 of 2</div>
+      <h1>Create your workspace</h1>
+      <p className="auth-lede">Create an account and the first workspace for your team.</p>
+      {error && <div className="error-alert" role="alert"><AlertCircle />{error}</div>}
+      <form onSubmit={handleSubmit}>
+        <div className="form-group"><label className="form-label" htmlFor="name">Your name</label><input className="form-input" id="name" value={name} onChange={(event) => setName(event.target.value)} required /></div>
+        <div className="form-group"><label className="form-label" htmlFor="workspace">Workspace name</label><input className="form-input" id="workspace" value={organizationName} onChange={(event) => setOrganizationName(event.target.value)} required /></div>
+        <div className="form-group"><label className="form-label" htmlFor="email">Email</label><input className="form-input" id="email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
+        <div className="form-group"><label className="form-label" htmlFor="password">Password</label><input className="form-input" id="password" type="password" autoComplete="new-password" minLength={1} value={password} onChange={(event) => setPassword(event.target.value)} required /></div>
+        <button className="btn btn-primary auth-submit" disabled={loading} type="submit"><ArrowRight />{loading ? 'Creating workspace…' : 'Create workspace'}</button>
       </form>
-
-      <p style={{ marginTop: 16, textAlign: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}>
-        <Link href="/login" style={{ fontWeight: 'var(--font-weight-medium)', color: 'var(--color-accent)' }}>
-          Back to Login
-        </Link>
-      </p>
+      <p className="auth-footer">Already have an account? <Link href="/login">Sign in</Link></p>
     </div>
   )
 }

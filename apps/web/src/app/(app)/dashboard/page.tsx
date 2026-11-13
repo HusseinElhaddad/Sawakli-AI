@@ -1,12 +1,7 @@
 'use client'
 
+import { Suspense } from 'react'
 import {
-  Wallet,
-  MousePointerClick,
-  ShoppingCart,
-  Target,
-  TrendingUp,
-  TrendingDown,
   LineChart,
   ArrowRight,
   AlertTriangle,
@@ -15,55 +10,53 @@ import {
 import Link from 'next/link'
 import { useAnomalies } from '@/hooks/useAnomalies'
 import { useRecommendations } from '@/hooks/useRecommendations'
-import { getSession } from '@/lib/mock-auth'
-
-const KPI_DATA = [
-  {
-    label: 'Total Spend',
-    value: '42,500 EGP',
-    delta: '+12% vs last month',
-    positive: true,
-    icon: Wallet,
-    status: 'success' as const,
-  },
-  {
-    label: 'Total Clicks',
-    value: '8,240',
-    delta: '+8% vs last month',
-    positive: true,
-    icon: MousePointerClick,
-    status: null,
-  },
-  {
-    label: 'Conversions',
-    value: '312',
-    delta: '-5% vs last month',
-    positive: false,
-    icon: ShoppingCart,
-    status: 'warning' as const,
-  },
-  {
-    label: 'Avg CPA',
-    value: '136.2 EGP',
-    delta: '+18% vs last month',
-    positive: false,
-    icon: Target,
-    status: 'error' as const,
-  },
-]
-
-function kpiStatusStyle(status: 'success' | 'warning' | 'error' | null): React.CSSProperties {
-  if (!status) return {}
-  const map = {
-    success: { borderColor: 'rgba(24,145,94,0.15)', boxShadow: 'var(--shadow-status-success)' },
-    warning: { borderColor: 'rgba(200,138,4,0.18)', boxShadow: 'var(--shadow-status-warning)' },
-    error: { borderColor: 'rgba(217,54,68,0.2)', boxShadow: 'var(--shadow-status-error)' },
-  }
-  return map[status]
-}
+import { useSession } from '@/hooks/useSession'
+import { daysInRange } from '@/features/dashboard/aggregate'
+import { DataThrough, EmptyState, ErrorState, LoadingState, NoDataInWindow } from '@/features/dashboard/components/DataState'
+import { FilterBar } from '@/features/dashboard/components/FilterBar'
+import { KpiCards } from '@/features/dashboard/components/KpiCards'
+import { NeedsAttention } from '@/features/dashboard/components/NeedsAttention'
+import { useCampaignPerformance } from '@/features/dashboard/useCampaignPerformance'
+import { useDashboardFilters } from '@/features/dashboard/useDashboardFilters'
 
 export default function DashboardPage() {
-  const session = getSession()
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <DashboardContent />
+    </Suspense>
+  )
+}
+
+function LivePerformance() {
+  const [filters, setFilters] = useDashboardFilters()
+  const view = useCampaignPerformance(filters)
+
+  return (
+    <section aria-label="Campaign performance">
+      <FilterBar filters={filters} onChange={setFilters} />
+      {view.status === 'loading' && <LoadingState />}
+      {view.status === 'error' && <ErrorState error={view.error} onRetry={view.retry} />}
+      {view.status === 'empty' && <EmptyState />}
+      {view.status === 'no-data' && <NoDataInWindow fetchRange={view.fetchRange} />}
+      {view.status === 'ready' && (
+        <>
+          <DataThrough latest={view.latest} range={view.range} isRefreshing={view.isRefreshing} />
+          {view.rows.length === 0 ? (
+            <p className="muted-line">No campaigns match these filters.</p>
+          ) : view.current.days === 0 ? (
+            <p className="muted-line">The selected campaigns have no data in this range.</p>
+          ) : (
+            <KpiCards current={view.current} previous={view.previous} periodDays={daysInRange(view.range)} />
+          )}
+          <NeedsAttention rows={view.rows} filters={filters} />
+        </>
+      )}
+    </section>
+  )
+}
+
+function DashboardContent() {
+  const session = useSession()
   const orgId = session?.organization.id ?? ''
   const { data: anomalies } = useAnomalies()
   const { data: recommendations } = useRecommendations(orgId)
@@ -72,38 +65,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* KPI Row */}
-      <div className="kpi-grid">
-        {KPI_DATA.map((kpi) => (
-          <div
-            key={kpi.label}
-            className="kpi-card"
-            style={kpiStatusStyle(kpi.status)}
-          >
-            <div className="kpi-label">
-              <kpi.icon style={{ width: 13, height: 13, display: 'inline', verticalAlign: '-2px', marginRight: 5 }} />
-              {kpi.label}
-            </div>
-            <div className="kpi-value">{kpi.value}</div>
-            <div
-              className="kpi-change"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 3,
-                color: kpi.positive ? 'var(--color-success)' : 'var(--color-error)',
-              }}
-            >
-              {kpi.positive ? (
-                <TrendingUp style={{ width: 12, height: 12 }} />
-              ) : (
-                <TrendingDown style={{ width: 12, height: 12 }} />
-              )}
-              {kpi.delta}
-            </div>
-          </div>
-        ))}
+      <div className="demo-notice" role="status">
+        <strong>Live KPIs, sample AI panels</strong>
+        <span>KPI cards and the campaign table use your workspace&apos;s imported data. Active Anomalies and Pending Recommendations below are sample data until the AI output endpoints are available.</span>
       </div>
+
+      <LivePerformance />
 
       {/* Performance Overview Chart Placeholder */}
       <div className="card">
@@ -132,6 +99,7 @@ export default function DashboardPage() {
           <div className="card-header">
             <AlertTriangle />
             Active Anomalies
+            <span className="badge sample-badge">Sample data</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {anomalies?.map((a) => (
@@ -189,6 +157,7 @@ export default function DashboardPage() {
             <div className="card-header" style={{ marginBottom: 0 }}>
               <Lightbulb />
               Pending Recommendations
+              <span className="badge sample-badge">Sample data</span>
             </div>
             <Link
               href="/recommendations"

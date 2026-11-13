@@ -1,4 +1,4 @@
-import type { User, Organization } from '@/types'
+import type { Organization, User } from '@/types'
 
 export type Session = {
   user: User
@@ -17,23 +17,23 @@ function deleteCookie(name: string) {
   document.cookie = `${name}=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT`
 }
 
-let _cachedRaw: string | null = null
-let _cachedSession: Session | null = null
+let cachedRaw: string | null = null
+let cachedSession: Session | null = null
 
 export function getSession(): Session | null {
   if (typeof window === 'undefined') return null
   const raw = localStorage.getItem(STORAGE_KEY)
-  if (raw === _cachedRaw) return _cachedSession
-  _cachedRaw = raw
+  if (raw === cachedRaw) return cachedSession
+  cachedRaw = raw
   if (!raw) {
-    _cachedSession = null
+    cachedSession = null
     return null
   }
   try {
-    _cachedSession = JSON.parse(raw) as Session
-    return _cachedSession
+    cachedSession = JSON.parse(raw) as Session
+    return cachedSession
   } catch {
-    _cachedSession = null
+    cachedSession = null
     return null
   }
 }
@@ -46,20 +46,4 @@ export function setSession(session: Session): void {
 export function clearSession(): void {
   localStorage.removeItem(STORAGE_KEY)
   deleteCookie(COOKIE_NAME)
-}
-
-export const DEMO_SESSION: Session = {
-  user: {
-    id: 'demo-001',
-    name: 'Ahmed Hassan',
-    email: 'demo@fashionbrandx.com',
-    role: 'admin',
-  },
-  organization: {
-    id: 'org-001',
-    name: 'Fashion Brand X',
-    plan: 'pro',
-    created_at: '2026-01-15T10:00:00Z',
-  },
-  access_token: 'demo-token-sawakli-2026',
 }
