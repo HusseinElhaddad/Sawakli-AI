@@ -497,4 +497,3 @@ No review, ADR acceptance, real production dispatch or runtime-role rollout is i
   repository artifacts. Final attachments belong to the existing AI-06 Notion task.
 - Independent affected-owner review and merge remain open; the PR stays draft and AI-06
   remains In Progress. No approval event or ADR 0002 acceptance is fabricated.
-
