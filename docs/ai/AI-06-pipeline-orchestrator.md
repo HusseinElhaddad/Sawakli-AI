@@ -375,7 +375,8 @@ matching URLs and guarded test names. Never aim fresh-db at development/producti
 | Stored example and exact replay | PASS - real canonical ingestion, analytical modules and PostgreSQL writes |
 | Local Compose build/integration | NOT RUN — Docker daemon unavailable; docker compose build could not connect to its socket |
 | Whitespace | PASS - git diff --check |
-| Governance and exact-head CI | Publication evidence recorded below; no pending run is a PASS |
+| Documentation governance against actual PR base | PASS - 25de23a..HEAD |
+| Implementation-head GitHub Compose smoke, frontend, contracts and governance | PASS - observed job conclusions in run 43633411244; Backend conclusion was still pending at this documentation snapshot |
 
 Original-vs-new evidence is reproducible with scripts/ai06_detector_equivalence.py
 against the actual base SHA above. Diagnostic hashes over all original fields:
@@ -476,4 +477,24 @@ No review, ADR acceptance, real production dispatch or runtime-role rollout is i
 - [Persistence source](../../apps/backend/src/sawakli/ai/persistence.py)
 - [PostgreSQL integration tests](../../apps/backend/tests/integration/ai/test_pipeline.py)
 - [Evidence command](../../scripts/ai06_evidence.py)
-- PR, final commits, exact-head CI and delivered PDF evidence: publication record below.
+
+### Publication record
+
+- [Draft PR #35](https://github.com/HusseinElhaddad/Sawakli-AI/pull/35), base
+  `25de23a064d9c315fed6b317221f5da939803380`; branch `feat/ai-06-pipeline`.
+- [Verified implementation commit d6657df](https://github.com/HusseinElhaddad/Sawakli-AI/commit/d6657df5dfcb5c26a8e36488918bba7b772e254a).
+  The subsequent publication-document commit changes this document only; no analytical,
+  persistence, migration or test change is hidden in that follow-up.
+- [Implementation-head CI run 43633411244](https://github.com/HusseinElhaddad/Sawakli-AI/actions/runs/43633411244):
+  observed PASS for Frontend, Contracts, Documentation governance and Compose Integration.
+  Backend was still running at this documentation snapshot; this is not full-CI PASS.
+- [Current PR checks](https://github.com/HusseinElhaddad/Sawakli-AI/pull/35/checks) identify
+  the exact current head. The final handoff and Notion evidence record its final SHA
+  and observed workflow result separately; earlier-head results never stand in for it.
+- Both PDF exports are generated outside git from these editable sources, with embedded
+  fonts, source links, vector diagrams and page numbers. They are rendered page by page
+  for visual inspection before delivery. PDF files, images and raw test exports are not
+  repository artifacts. Final attachments belong to the existing AI-06 Notion task.
+- Independent affected-owner review and merge remain open; the PR stays draft and AI-06
+  remains In Progress. No approval event or ADR 0002 acceptance is fabricated.
+
