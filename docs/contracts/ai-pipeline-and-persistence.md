@@ -1,8 +1,9 @@
 # AI pipeline and persistence contract - v1
 
 **Lifecycle:** concrete contract prepared for affected-owner review under ARCH-03.
-Typed contracts, pure boundary adapters and fixture validation are implemented in this
-change. Production execution/persistence remains the named downstream tasks. See
+Typed contracts, adapters and fixture validation are implemented. AI-06 now supplies
+production execution/persistence on its feature branch; independent review/merge and
+WORK-04 dispatch remain separate gates. ADR 0002 is still prepared for review. See
 [ADR 0002](../adr/0002-ai-pipeline-and-persistence-boundaries.md) for decisions and alternatives.
 
 ## 1. Ownership and current endpoints
@@ -56,14 +57,14 @@ AI-02's original insufficient-history diagnostic remains unchanged.
 
 ## 3. Computation and public execution signature
 
-Future AI-06 implements:
+AI-06 implements:
 
 ```python
 def run_pipeline(request: PipelineRequest, *, cancellation: CancellationCheck) -> PipelineOutcome:
     ...
 ```
 
-This callable is specified, not implemented by ARCH-03. Dependencies use the existing
+ARCH-03 specified this callable; AI-06 implements it in ai/pipeline.py. Dependencies use the existing
 DataLoader and SQLAlchemy Session conventions; do not create another DB/session framework.
 Load -> engineer -> detect and forecast -> adapt -> recommend -> simulate -> publish.
 All randomness uses existing fixed module seeds. Freeze one input batch for the attempt.
@@ -149,6 +150,30 @@ depend on the orchestrator. FUT-05 arbitrary simulation requests remain out of s
 The AI-05 [action simulation contract](action-simulation.md) defines the explicit seven-day
 baseline input, proportional-v1 arithmetic, validation and deterministic public callable.
 
+### AI-06 baseline preparation: historical-repeat-v1
+
+**Owner approval:** Hussein Elhaddad explicitly approved this MVP policy in the AI-06
+implementation chat on 14 November 2026. This records that specific approval only;
+it does not change ADR 0002's lifecycle or imply affected-owner review acceptance.
+
+Use exactly **as_of-6 through as_of, inclusive**, from the authorized organization
+and campaign. Require all seven distinct calendar dates; reject duplicate campaign/day
+inputs. A recorded zero-activity day is present. Never use the last seven observed
+records, interpolate a gap or substitute zero for a missing date. Sum canonical spend,
+conversions and revenue, and repeat those totals into as_of+1 through as_of+7. Record
+the source window and historical-repeat assumption in SimulationBaseline.source and
+preserve AI-05's complete assumptions in recommendation evidence. This is an MVP
+heuristic, not validated predictive accuracy or a conversion of AI-03 point forecasts.
+
+Example: seven measured days totaling 700 spend, 35 conversions, 2100 revenue give
+baseline totals 700/35/2100. One recorded zero day counts and lowers those totals;
+one absent date makes the baseline unavailable even if seven earlier observations exist.
+
+For an unavailable baseline, retain independently valid forecasts and anomalies but
+omit that campaign's recommendations and simulations, warn insufficient_history,
+and store campaign_id, window_start/window_end, reason and omitted_rule_ids in
+model_runs.execution_metadata.omissions. PipelineOutcome's shape remains unchanged.
+
 ## 5. Transactions, retry and cancellation
 
 The Worker control boundary is `request_job_cancellation(organization_id, job_id)
@@ -209,6 +234,35 @@ is separately gated FUT-04; no exactly-once claim is made here.
 Snapshot limitation: frozen as_of prevents future-date leakage but not corrections to
 old canonical facts between failed attempts. Determinism means same records/configuration;
 successful replay returns persisted results. Full immutable dataset versioning is deferred.
+
+### Durable run context (AI-06 successor migration)
+
+Migration 0013_ai_execution_metadata adds one nullable JSONB column to model_runs.
+Existing columns cannot reconstruct all warnings or campaign omissions on replay,
+or distinguish a later eligible claim from a repeated FAILED call. The canonical
+schema register now includes model_runs and its existing enum, without changing any
+existing enum values. Historical migrations remain unchanged.
+
+execution_metadata contains request (PipelineRequest serialized as JSON), retry_count,
+claimed_at (UTC ISO timestamp), omissions (array) and outcome (serialized PipelineOutcome
+when finalized). Request.contract_version versions this envelope. campaigns_analyzed
+remains an array of campaign UUID strings; error_message contains only a safe code.
+Old rows with NULL metadata are rejected for execution/replay without being changed:
+AI cannot invent an exact outcome or original claim. The schema addition is backward
+compatible for existing readers, but real execution requires the new migration.
+
+Registration, publication and failure finalization lock jobs before reading model_runs.
+A FAILED restart requires a retryable stored failure, RUNNING job, nonnull claimed_at,
+a strictly increased retry_count below min(max_retries, 3), later claimed_at and no
+retry schedule later than claimed_at. RUNNING publication requires the same claim
+context captured at registration. Success and cancellation outcomes are replayed
+exactly. Legacy job/enum PARTIAL_SUCCESS remains valid for other work; AI-06 never emits it.
+
+The input batch uses a REPEATABLE READ, READ ONLY transaction. Registration and
+publication set local UTC for timestamp-without-time-zone defaults. read_run first
+checks only the reserved ID's owner, rejecting a foreign run, then fetches full metadata
+with both organization and run predicates; foreign output or context is never returned.
+Any error while durably finalizing failure propagates to Worker recovery.
 
 ## 6. Evaluation contract
 

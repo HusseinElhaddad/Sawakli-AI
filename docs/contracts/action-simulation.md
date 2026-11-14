@@ -1,7 +1,8 @@
 # Action simulation - proportional-v1
 
-**Lifecycle:** AI-05 computation implemented on its feature branch; cross-layer adoption and
-stored-output evidence remain AI-06/API-05 work. This refines the calculation delegated to AI-05
+**Lifecycle:** AI-05 computation is merged. AI-06 supplies the PostgreSQL adapter and
+[stored/replay evidence](../ai/AI-06-pipeline-orchestrator.md#14-verification) on its
+feature branch; affected-owner review/merge and API-05 serving remain separate gates. This refines the calculation delegated to AI-05
 by the [AI integration contract](ai-pipeline-and-persistence.md#recommendations-and-simulations).
 It does not change its output fields, scenarios, ownership or seven-day horizon.
 
@@ -19,8 +20,9 @@ It does not change its output fields, scenarios, ownership or seven-day horizon.
 
 The caller prepares an explicit no-action baseline using authorized canonical data and records
 its estimation method in source. AI-05 does not estimate the baseline, read a database, fill
-missing dates, choose a training window or convert AI-03 point forecasts into totals. A repeated
-historical week is an example assumption, not a hidden fallback. Currency consistency remains
+missing dates, choose a training window or convert AI-03 point forecasts into totals. AI-06 uses the explicitly owner-approved
+[historical-repeat-v1 baseline policy](ai-pipeline-and-persistence.md#ai-06-baseline-preparation-historical-repeat-v1);
+other callers must supply their own explicit authorized baseline. Currency consistency remains
 the caller's responsibility because canonical inputs do not carry a currency field here.
 
 `simulate_actions(recommendations, baselines, *, organization_id, as_of)` returns an immutable
@@ -81,8 +83,7 @@ These are calculated scenario outputs, not observed outcomes or validated lift.
 
 AI-05 returns one batch per organization/campaign/rule within a caller's model run. AI-06 owns
 recommendation UUID assignment, FK resolution and atomic INSERTs into action_simulations. The
-simulator neither imports an orchestrator nor updates recommendation status. The task's actual
-stored-example acceptance is open until AI-06 supplies its adapter and PostgreSQL evidence.
+simulator neither imports an orchestrator nor updates recommendation status. AI-06's linked evidence records actual stored examples; acceptance still requires review and merge.
 
 See [technical documentation](../ai/AI-05-action-simulator.md) for executed verification and
 [learning guide](../ai/guides/action-simulator-walkthrough.md) for worked explanations.

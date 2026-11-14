@@ -2,6 +2,14 @@
 
 ## 1. Overview
 
+**14 November 2026 AI-06 handoff:** the [orchestrator task document](AI-06-pipeline-orchestrator.md)
+records the real composition/persistence adapter and PostgreSQL stored/replay evidence.
+Statements below about missing AI-06 wiring/evidence describe the earlier task checkpoint;
+AI-06 implementation is on its feature branch pending review/merge. WORK-04 production
+Worker dispatch and API-05 serving are still separate work. ADR 0002 remains prepared
+for review. This note records evidence, not a task-status or approval change.
+
+
 AI-04 turns campaign feature data, AI-03's forecasts, and (once available) AI-02's anomaly
 detections into human-readable recommendation cards. It is the diagnosis-and-prescription step of
 the AI pipeline: AI-01 measures, AI-02 flags statistical outliers, AI-03 projects forward, and

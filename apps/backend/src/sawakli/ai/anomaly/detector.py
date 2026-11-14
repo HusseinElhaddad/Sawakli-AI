@@ -6,12 +6,14 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import cast
 from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
 from sklearn.ensemble import IsolationForest  # type: ignore[import-untyped]
 
+from sawakli.ai.contracts import MetricEvidence, MetricName
 from sawakli.ai.features import FeatureRecord
 
 # Features produced by AI-01 that AI-02 will inspect.
@@ -56,6 +58,7 @@ class AnomalyResult:
     isolation_score: Decimal
 
     reasons: tuple[str, ...]
+    metric_evidence: tuple[MetricEvidence, ...] = ()
 
 
 def detect_anomalies(
@@ -139,14 +142,17 @@ def _detect_campaign_anomalies(
     results: list[AnomalyResult] = []
 
     for index, record in enumerate(records):
+        statistics = _feature_statistics(records, record)
         z_score, z_direction, z_reasons = _robust_z_score(
             records,
             record,
+            statistics=statistics,
         )
 
         iqr_score, iqr_direction, iqr_reasons = _iqr_score(
             records,
             record,
+            statistics=statistics,
         )
 
         isolation_score = Decimal(str(round(float(isolation_scores[index]), 6)))
@@ -184,6 +190,7 @@ def _detect_campaign_anomalies(
                 iqr_score=iqr_score,
                 isolation_score=isolation_score,
                 reasons=reasons,
+                metric_evidence=_metric_evidence(record, statistics),
             )
         )
 
@@ -230,109 +237,116 @@ def _build_feature_matrix(
     return np.asarray(matrix, dtype=float)
 
 
+@dataclass(frozen=True, slots=True)
+class _FeatureStatistic:
+    name: str
+    median: float
+    current: float
+    count: int
+    z: Decimal
+    iqr: Decimal
+
+
+def _feature_statistics(
+    records: list[FeatureRecord], record: FeatureRecord
+) -> tuple[_FeatureStatistic, ...]:
+    """Single calculation used by both detector branches and structured evidence."""
+    history = [item for item in records if item.date < record.date]
+    if len(history) < 5:
+        return ()
+    result: list[_FeatureStatistic] = []
+    for name in DEFAULT_FEATURES:
+        current = getattr(record, name)
+        if current is None:
+            continue
+        values = [float(value) for item in history if (value := getattr(item, name)) is not None]
+        if len(values) < 5:
+            continue
+        median = float(np.median(values))
+        mad = float(np.median([abs(value - median) for value in values]))
+        current_value = float(current)
+        scale = max(1.4826 * mad, _minimum_dispersion(name, median))
+        robust_z = abs(current_value - median) / scale
+        z = Decimal(str(round(min(robust_z / 6.0, 1.0), 6)))
+        q1, q3 = np.percentile(sorted(values), [25, 75])
+        width = max(float(q3 - q1), _minimum_dispersion(name, median))
+        lower, upper = q1 - 1.5 * width, q3 + 1.5 * width
+        distance = (
+            (lower - current_value) / width
+            if current_value < lower
+            else ((current_value - upper) / width if current_value > upper else 0.0)
+        )
+        iqr = Decimal(str(round(min(distance / 3.0, 1.0), 6)))
+        result.append(_FeatureStatistic(name, median, current_value, len(values), z, iqr))
+    return tuple(result)
+
+
+def _metric_evidence(
+    record: FeatureRecord, statistics: tuple[_FeatureStatistic, ...]
+) -> tuple[MetricEvidence, ...]:
+    return tuple(
+        MetricEvidence(
+            organization_id=record.organization_id,
+            campaign_id=record.campaign_id,
+            observed_on=record.date,
+            metric_name=cast(MetricName, item.name),
+            current_value=getattr(record, item.name),
+            baseline_median=Decimal(str(item.median)),
+            historical_count=item.count,
+            z_contribution=item.z,
+            iqr_contribution=item.iqr,
+        )
+        for item in statistics
+        if item.name in {"spend", "ctr", "cpc", "cpa", "roas"} and (item.z > 0 or item.iqr > 0)
+    )
+
+
 def _robust_z_score(
     records: list[FeatureRecord],
     record: FeatureRecord,
+    *,
+    statistics: tuple[_FeatureStatistic, ...] | None = None,
 ) -> tuple[Decimal, str, list[str]]:
-    """Compare the current record against previous campaign history."""
-
-    strongest_score = Decimal("0")
-    strongest_direction = "normal"
-    reasons: list[str] = []
-    contributions: list[Decimal] = []
-
-    history = [item for item in records if item.date < record.date]
-
-    if len(history) < 5:
-        return Decimal("0"), "normal", []
-
-    for feature_name in DEFAULT_FEATURES:
-        current = getattr(record, feature_name)
-
-        if current is None:
-            continue
-
-        values = [
-            float(value) for item in history if (value := getattr(item, feature_name)) is not None
-        ]
-
-        if len(values) < 5:
-            continue
-
-        median_value = float(np.median(values))
-
-        absolute_deviations = [abs(value - median_value) for value in values]
-
-        mad = float(np.median(absolute_deviations))
-        current_value = float(current)
-
-        scale = max(1.4826 * mad, _minimum_dispersion(feature_name, median_value))
-        robust_z = abs(current_value - median_value) / scale
-        score = Decimal(str(round(min(robust_z / 6.0, 1.0), 6)))
-        contributions.append(score)
-
-        if score > strongest_score:
-            strongest_score = score
-
-            strongest_direction = "up" if current_value > median_value else "down"
-
-            reasons = [f"{feature_name} is unusually {strongest_direction}"]
-
-    return _corroborated_score(contributions), strongest_direction, reasons
+    stats = _feature_statistics(records, record) if statistics is None else statistics
+    strongest = max(stats, key=lambda item: item.z, default=None)
+    if strongest is None or strongest.z == 0:
+        return (
+            Decimal("0")
+            if sum(item.date < record.date for item in records) < 5
+            else _corroborated_score([]),
+            "normal",
+            [],
+        )
+    direction = "up" if strongest.current > strongest.median else "down"
+    return (
+        _corroborated_score([item.z for item in stats]),
+        direction,
+        [f"{strongest.name} is unusually {direction}"],
+    )
 
 
 def _iqr_score(
     records: list[FeatureRecord],
     record: FeatureRecord,
+    *,
+    statistics: tuple[_FeatureStatistic, ...] | None = None,
 ) -> tuple[Decimal, str, list[str]]:
-    """Compare the current record against previous campaign history."""
-
-    strongest_score = Decimal("0")
-    strongest_direction = "normal"
-    reasons: list[str] = []
-    contributions: list[Decimal] = []
-
-    history = [item for item in records if item.date < record.date]
-
-    if len(history) < 5:
-        return Decimal("0"), "normal", []
-
-    for feature_name in DEFAULT_FEATURES:
-        current = getattr(record, feature_name)
-
-        if current is None:
-            continue
-
-        values = sorted(
-            float(value) for item in history if (value := getattr(item, feature_name)) is not None
+    stats = _feature_statistics(records, record) if statistics is None else statistics
+    strongest = max(stats, key=lambda item: item.iqr, default=None)
+    if strongest is None or strongest.iqr == 0:
+        return (
+            Decimal("0")
+            if sum(item.date < record.date for item in records) < 5
+            else _corroborated_score([]),
+            "normal",
+            [],
         )
-
-        if len(values) < 5:
-            continue
-
-        q1, q3 = np.percentile(values, [25, 75])
-        iqr = max(float(q3 - q1), _minimum_dispersion(feature_name, float(np.median(values))))
-        current_value = float(current)
-
-        lower = q1 - 1.5 * iqr
-        upper = q3 + 1.5 * iqr
-        if current_value < lower:
-            distance = (lower - current_value) / iqr
-            direction = "down"
-        elif current_value > upper:
-            distance = (current_value - upper) / iqr
-            direction = "up"
-        else:
-            continue
-        score = Decimal(str(round(min(distance / 3.0, 1.0), 6)))
-        contributions.append(score)
-
-        if score > strongest_score:
-            strongest_score = score
-            strongest_direction = direction
-            reasons = [f"{feature_name} is outside the normal IQR range"]
-
-    return _corroborated_score(contributions), strongest_direction, reasons
+    direction = "up" if strongest.current > strongest.median else "down"
+    return (
+        _corroborated_score([item.iqr for item in stats]),
+        direction,
+        [f"{strongest.name} is outside the normal IQR range"],
+    )
 
 
 def _corroborated_score(contributions: list[Decimal]) -> Decimal:
