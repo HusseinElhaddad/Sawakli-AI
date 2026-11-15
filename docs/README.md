@@ -14,6 +14,9 @@ Important technical information must be maintained here, not only in Notion or a
 
 ## Start Here
 
+- [Repository layout and cleanup inventory](architecture/repository-layout.md)
+- [DEV-02 repository cleanup](architecture/DEV-02-repository-structure-cleanup.md)
+- [DEV-02 execution plan](architecture/plans/dev-02-execution.md)
 - [Documentation standard](DOCUMENTATION_STANDARD.md)
 - [Technical task template](templates/TASK_DOCUMENTATION_TEMPLATE.md)
 - [AI-01 feature pipeline](ai/AI-01-feature-pipeline.md)
