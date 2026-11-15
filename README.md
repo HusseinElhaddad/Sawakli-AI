@@ -289,7 +289,7 @@ Graduation project at **Helwan University, Faculty of Engineering**.
 | Connector and Data | Youssef Halawa |
 | Worker | El-Farouk Omar |
 | System QA | Mohamed Hassan |
-| Supervisor | Prof. Samar A. Said |
+| Supervisor | Prof. Rasha Fathy Aly |
 
 Track ownership follows the revised execution plan. Original implementation and PR authors remain
 credited in Git history and task evidence.
