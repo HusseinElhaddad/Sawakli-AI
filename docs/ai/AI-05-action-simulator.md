@@ -2,6 +2,14 @@
 
 ## 1. Overview
 
+**14 November 2026 AI-06 handoff:** the [orchestrator task document](AI-06-pipeline-orchestrator.md)
+records the real composition/persistence adapter and PostgreSQL stored/replay evidence.
+Statements below about missing AI-06 wiring/evidence describe the earlier task checkpoint;
+AI-06 implementation is on its feature branch pending review/merge. WORK-04 production
+Worker dispatch and API-05 serving are still separate work. ADR 0002 remains prepared
+for review. This note records evidence, not a task-status or approval change.
+
+
 AI-05 implements a deterministic what-if calculator for the three approved budget scenarios.
 It consumes AI-04 recommendations and explicit seven-day baseline totals and returns the existing
 ARCH-03 SimulationBatch. No database, HTTP, scheduling or external campaign action is performed.

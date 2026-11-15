@@ -24,7 +24,7 @@ kept in sync with the corresponding migrations under alembic/versions/.
 from __future__ import annotations
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import BYTEA, TIMESTAMP, UUID
+from sqlalchemy.dialects.postgresql import BYTEA, ENUM, JSONB, TIMESTAMP, UUID
 
 metadata = sa.MetaData()
 
@@ -208,4 +208,136 @@ ga_events_table = sa.Table(
     sa.Column("sessions", sa.Integer, nullable=False),
     sa.Column("bounces", sa.Integer, nullable=False),
     sa.Column("session_duration", sa.Numeric, nullable=True),
+)
+
+
+# AI-owned query handles. Migrations remain the schema authority.
+
+model_runs_table = sa.Table(
+    "model_runs",
+    metadata,
+    sa.Column("id", UUID(as_uuid=True), primary_key=True),
+    sa.Column("organization_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("triggered_by_user_id", UUID(as_uuid=True)),
+    sa.Column("started_at", TIMESTAMP(), server_default=sa.text("CURRENT_TIMESTAMP")),
+    sa.Column(
+        "status",
+        ENUM(
+            "RUNNING",
+            "SUCCESS",
+            "FAILED",
+            "CANCELLED",
+            "PARTIAL_SUCCESS",
+            name="model_run_status_enum",
+            create_type=False,
+        ),
+        nullable=False,
+    ),
+    sa.Column("campaigns_analyzed", JSONB),
+    sa.Column("error_message", sa.Text),
+    sa.Column("completed_at", TIMESTAMP()),
+    sa.Column("execution_metadata", JSONB),
+)
+
+forecasts_table = sa.Table(
+    "forecasts",
+    metadata,
+    sa.Column("id", UUID(as_uuid=True), primary_key=True),
+    sa.Column("model_run_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("organization_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("campaign_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("metric_name", sa.String, nullable=False),
+    sa.Column("forecast_date", sa.Date, nullable=False),
+    sa.Column("value", sa.Numeric, nullable=False),
+    sa.Column("ci_lower", sa.Numeric),
+    sa.Column("ci_upper", sa.Numeric),
+    sa.Column("model_used", sa.String),
+    sa.Column(
+        "created_at", TIMESTAMP(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+    ),
+)
+
+anomalies_table = sa.Table(
+    "anomalies",
+    metadata,
+    sa.Column("id", UUID(as_uuid=True), primary_key=True),
+    sa.Column("model_run_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("organization_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("campaign_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("metric_name", sa.String, nullable=False),
+    sa.Column("detected_at", TIMESTAMP(), nullable=False),
+    sa.Column("anomaly_score", sa.Numeric, nullable=False),
+    sa.Column(
+        "severity",
+        ENUM("low", "medium", "high", name="anomaly_severity_enum", create_type=False),
+        nullable=False,
+    ),
+    sa.Column(
+        "direction",
+        ENUM("above", "below", name="anomaly_direction_enum", create_type=False),
+        nullable=False,
+    ),
+    sa.Column("detectors_triggered", JSONB),
+    sa.Column(
+        "created_at", TIMESTAMP(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+    ),
+)
+
+recommendations_table = sa.Table(
+    "recommendations",
+    metadata,
+    sa.Column("id", UUID(as_uuid=True), primary_key=True),
+    sa.Column("model_run_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("organization_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("campaign_id", UUID(as_uuid=True), nullable=False),
+    sa.Column("source_anomaly_id", UUID(as_uuid=True)),
+    sa.Column("problem", sa.Text, nullable=False),
+    sa.Column("evidence", JSONB),
+    sa.Column("suggested_action", sa.Text),
+    sa.Column("confidence_score", sa.Numeric),
+    sa.Column(
+        "risk_rating", ENUM("low", "medium", "high", name="risk_rating_enum", create_type=False)
+    ),
+    sa.Column("severity", sa.Integer),
+    sa.Column(
+        "created_at", TIMESTAMP(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+    ),
+    sa.Column(
+        "status",
+        ENUM(
+            "pending",
+            "approved",
+            "rejected",
+            "marked_done",
+            "needs_review",
+            name="recommendation_status_enum",
+            create_type=False,
+        ),
+        nullable=False,
+    ),
+)
+
+action_simulations_table = sa.Table(
+    "action_simulations",
+    metadata,
+    sa.Column("id", UUID(as_uuid=True), primary_key=True),
+    sa.Column("recommendation_id", UUID(as_uuid=True), nullable=False),
+    sa.Column(
+        "scenario_type",
+        ENUM(
+            "budget_decrease_20",
+            "budget_increase_15",
+            "pause",
+            name="simulation_scenario_enum",
+            create_type=False,
+        ),
+        nullable=False,
+    ),
+    sa.Column("projected_spend", sa.Numeric, nullable=False),
+    sa.Column("projected_conversions", sa.Numeric, nullable=False),
+    sa.Column("projected_cpa", sa.Numeric, nullable=False),
+    sa.Column("projected_roas", sa.Numeric, nullable=False),
+    sa.Column(
+        "created_at", TIMESTAMP(), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")
+    ),
 )

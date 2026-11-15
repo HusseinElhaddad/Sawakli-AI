@@ -3,6 +3,7 @@
   "description": "Sawakli AI canonical contract — single source of truth derived from INT-01 and DATA-01 SQL migrations. Every layer (DB, Backend, UI, AI) must match these definitions.",
   "version": "1.0.0",
   "enums": {
+    "model_run_status_enum": ["RUNNING", "SUCCESS", "FAILED", "CANCELLED", "PARTIAL_SUCCESS"],
     "provider_enum": ["googleads", "metaads", "googleanalytics", "csv_demo"],
     "data_source_status_enum": ["connected", "disconnected", "syncing", "failed", "stale", "demo_data"],
     "sync_status_enum": ["pending", "running", "success", "failed"],
@@ -17,6 +18,54 @@
     "simulation_scenario_enum": ["budget_decrease_20", "budget_increase_15", "pause"]
   },
   "entities": {
+    "model_runs": {
+      "source": "0004_ai_layer_tables + 0013_ai_execution_metadata",
+      "fields": {
+        "id": {
+          "type": "uuid",
+          "nullable": false
+        },
+        "organization_id": {
+          "type": "uuid",
+          "nullable": false
+        },
+        "triggered_by_user_id": {
+          "type": "uuid",
+          "nullable": true
+        },
+        "started_at": {
+          "type": "timestamp",
+          "nullable": false
+        },
+        "status": {
+          "type": "model_run_status_enum",
+          "nullable": false
+        },
+        "campaigns_analyzed": {
+          "type": "jsonb",
+          "nullable": true
+        },
+        "error_message": {
+          "type": "text",
+          "nullable": true
+        },
+        "completed_at": {
+          "type": "timestamp",
+          "nullable": true
+        },
+        "execution_metadata": {
+          "type": "jsonb",
+          "nullable": true
+        }
+      },
+      "ownership": {
+        "writer": "AI-06",
+        "worker": "reserves id on jobs; never inserts model_runs"
+      },
+      "semantics": {
+        "execution_metadata": "Versioned request/claim context, exact outcome and campaign-specific omissions for replay. NULL on historical rows; no fabricated replay."
+      }
+    },
     "organizations": {
       "source": "002_backend_tables.sql",
       "fields": {
