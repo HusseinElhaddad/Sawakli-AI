@@ -42,7 +42,8 @@ def test_real_chain_access_audit_immutable_inputs_and_alternating_tenants(securi
         spend_totals = [
             db.scalar(
                 sa.text(
-                    "SELECT sum(value) FROM forecasts WHERE organization_id=:org AND metric_name='spend'"
+                    "SELECT sum(value) FROM forecasts "
+                    "WHERE organization_id=:org AND metric_name='spend'"
                 ),
                 {"org": request.organization_id},
             )
