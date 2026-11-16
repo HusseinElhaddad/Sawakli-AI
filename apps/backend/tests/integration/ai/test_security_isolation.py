@@ -14,7 +14,7 @@ from sawakli.ai.features import DatabaseDataLoader
 def canonical_snapshot(engine):
     with engine.connect() as db:
         return {
-            table: db.execute(sa.text(f"SELECT * FROM {table} ORDER BY id")).all()
+            table: sorted(db.execute(sa.text(f"SELECT * FROM {table}")).all(), key=repr)
             for table in ("campaigns", "daily_metrics", "feature_daily", "ga_events", "jobs")
         }
 
