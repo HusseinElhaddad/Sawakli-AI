@@ -26,6 +26,15 @@ def security_case(monkeypatch):
     monkeypatch.setattr(pipeline, "SessionLocal", factory)
     with factory() as db:
         requests = (seed_pipeline_case(db), seed_pipeline_case(db))
+        # Same campaign names, deliberately different tenant populations.
+        db.execute(
+            sa.text(
+                "UPDATE daily_metrics SET spend=spend*2,revenue=revenue*3 "
+                "WHERE organization_id=:org"
+            ),
+            {"org": requests[1].organization_id},
+        )
+        db.commit()
     try:
         yield engine, factory, requests
     finally:

@@ -38,6 +38,18 @@ def test_real_chain_access_audit_immutable_inputs_and_alternating_tenants(securi
     assert all(outcome.status == RunStatus.SUCCESS for outcome in outcomes)
     assert outcomes[0] == outcomes[2]
     assert canonical_snapshot(engine) == before
+    with engine.connect() as db:
+        spend_totals = [
+            db.scalar(
+                sa.text(
+                    "SELECT sum(value) FROM forecasts WHERE organization_id=:org AND metric_name='spend'"
+                ),
+                {"org": request.organization_id},
+            )
+            for request in requests
+        ]
+    assert spend_totals[0] > 0
+    assert spend_totals[1] > spend_totals[0]
     assert statements
     forbidden = {"users", "oauth_connections", "connector_tokens", "raw_api_responses"}
     tables = {
