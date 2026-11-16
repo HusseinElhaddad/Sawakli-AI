@@ -3,7 +3,7 @@
 ## 1. Overview
 
 AI-07 adds inspectable security evidence and an enforced whole-AI statement-coverage gate.
-Implementation is on a feature branch; database and final-head verification are pending.
+Implementation and PostgreSQL verification are published in [draft PR #37](https://github.com/HusseinElhaddad/Sawakli-AI/pull/37). Independent review and the explicitly retained permission gate remain open.
 No production runtime-role rollout is claimed.
 
 ## 2. Scope
@@ -112,9 +112,27 @@ only computation failure is fault-injected. Full existing suites retain determin
 
 Base: `8590e23846801d16fe559809f6698a80a6af4b2f`. Python 3.12 isolated environment.
 
-- PASS: 23 new focused unit checks; source checker reports zero violations.
+- PASS: 23 focused unit checks; source checker reports zero violations.
+- PASS: local prior-head unit suite, 348 tests; statement coverage 80.20% (1284/1601).
+  This predates the last two checker cases; the full CI suite below includes them.
 - PASS: strict mypy, 100 source files.
-- Pending: full backend tests/coverage, Ruff final checks, contracts and final-head CI.
+- PASS: [implementation-head CI run 43915852195](https://github.com/HusseinElhaddad/Sawakli-AI/actions/runs/43915852195),
+  head `f524ad06d5ea47784624b206ca5efaed20e75165`: **522 passed, zero skips**,
+  including actual PostgreSQL18 restricted-login/RLS and real pipeline tests.
+- PASS: AI statement coverage **94.25%**, 1509/1601 statements covered, 92 missing.
+  XML/HTML and JUnit are in the `ai-security-coverage` artifact (14-day retention).
+  Source includes all AI files with no custom omit list or added no-cover pragmas.
+  Coverage.py's default exclusions account for 16 pre-existing stub/protocol lines;
+  no exclusions were introduced to obtain this result.
+- PASS: Ruff lint/format, source guard, strict mypy; all six contract validators/negative
+  cases; frontend checks; Compose Integration; PR documentation governance; whitespace.
+- PASS: actual PostgreSQL migration round-trip, **23 → 0 → 23** tables.
+- Earlier runs failed on an erroneous `ORDER BY id` in the new snapshot helper;
+  `daily_metrics` uses a composite key. The helper now sorts complete typed rows by
+  representation, retaining Decimal precision and all columns. No test/gate was weakened.
+- This evidence predates only the final documentation publication commit. Exact final-head
+  CI is recorded on [PR #37](https://github.com/HusseinElhaddad/Sawakli-AI/pull/37) and Notion;
+  earlier-head results are not substituted for that check.
 - NOT RUN locally: PostgreSQL and Compose. Docker socket inaccessible in sandbox; outside
   sandbox Docker reports no daemon/socket. sudo is unavailable under no-new-privileges.
   Existing CI PostgreSQL18/Compose route is the integration verification path.
