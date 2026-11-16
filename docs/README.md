@@ -60,3 +60,6 @@ Important technical information must be maintained here, not only in Notion or a
 Directories are created when maintained content exists. Some categories may therefore be absent.
 Existing historical directories remain valid until their content is deliberately reconciled with
 the standard.
+
+- [AI-07 security, isolation and model tests](ai/AI-07-security-isolation-and-model-tests.md)
+- [AI-07 execution plan](ai/plans/ai-security-execution.md)

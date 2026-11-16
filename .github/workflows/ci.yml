@@ -91,6 +91,8 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/sawakli_integration_test
         run: python ../../scripts/integration_harness.py fresh-db TEST_DATABASE_URL
+      - name: AI source security boundary
+        run: python ../../scripts/check_ai_security.py
       - name: Tests
         env:
           JWT_SECRET: change-this-to-a-real-secret
@@ -98,8 +100,20 @@ jobs:
           TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/sawakli_integration_test
         # A skipped test is a test that did not run: fail the job if any test is skipped.
         run: |
-          pytest -rs --junitxml=pytest-results.xml
+          python -m coverage run -m pytest -rs --junitxml=pytest-results.xml
+          python -m coverage report
+          python -m coverage xml -o coverage/ai.xml
+          python -m coverage html -d coverage/html
           python -c "import sys, xml.etree.ElementTree as ET; s = sum(int(t.get('skipped', 0)) for t in ET.parse('pytest-results.xml').getroot().iter('testsuite')); print(f'skipped tests: {s}'); sys.exit(1 if s else 0)"
+      - name: AI coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-security-coverage
+          path: |
+            apps/backend/coverage/
+            apps/backend/pytest-results.xml
+          retention-days: 14
       - name: Migration round-trip (upgrade head, downgrade base, upgrade head)
         env:
           ROUNDTRIP_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5433/sawakli_roundtrip

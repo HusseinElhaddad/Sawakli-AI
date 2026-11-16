@@ -33,6 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3,<9.0",
+    "coverage>=7.6,<8",
     "pytest-asyncio>=0.25,<1.0",
     "httpx>=0.28,<1.0",
     "ruff>=0.9,<1.0",
@@ -75,3 +76,11 @@ explicit_package_bases = true
 module = ["jose", "jose.*", "passlib", "passlib.*"]
 ignore_missing_imports = true
 
+
+[tool.coverage.run]
+source = ["src/sawakli/ai"]
+
+[tool.coverage.report]
+fail_under = 70
+precision = 2
+show_missing = true
