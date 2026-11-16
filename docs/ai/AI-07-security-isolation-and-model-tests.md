@@ -39,7 +39,7 @@ non-superuser login inheriting the actual migrated ai_layer_role. Fixtures never
    writes, positive canonical reads/output INSERTs, foreign-row rejection and context reset.
    The jobs-lock privilege gap is explicitly tested, not repaired inside fixtures.
 5. **Coverage:** coverage.py is development-only. Existing full pytest runs under coverage,
-   measuring every executable statement under `src/sawakli/ai`; CI fails below70%.
+   measuring every executable statement under `src/sawakli/ai`; CI fails below 70%.
 
 | Acceptance | Evidence |
 |---|---|
@@ -50,7 +50,7 @@ non-superuser login inheriting the actual migrated ai_layer_role. Fixtures never
 | Database enforcement | Restricted login positive/negative RLS controls |
 | >=70% AI statement coverage | Complete-package coverage configuration, CI report/artifact |
 
-Expected behavior above is distinct from executed results in section14.
+Expected behavior above is distinct from executed results in section 14.
 
 ## 6. Inputs
 
@@ -96,7 +96,7 @@ is inferred from passing test-login probes. Test roles are unique and dropped af
 
 ## 12. Error and Edge-Case Behavior
 
-Denied SQL statements assert PostgreSQL SQLSTATE42501. Missing/invalid org context must
+Denied SQL statements assert PostgreSQL SQLSTATE 42501. Missing/invalid org context must
 fail closed, with positive own-tenant visibility proving tests are not vacuous. Connection
 reuse after commit/rollback must not retain org context. Required infrastructure failures
 fail visibly rather than skipping. Safe computation failures preserve canonical input rows.
@@ -110,9 +110,9 @@ only computation failure is fault-injected. Full existing suites retain determin
 
 ## 14. Verification
 
-Base: `8590e23846801d16fe559809f6698a80a6af4b2f`. Python3.12 isolated environment.
+Base: `8590e23846801d16fe559809f6698a80a6af4b2f`. Python 3.12 isolated environment.
 
-- PASS: 21 new focused unit checks; source checker reports zero violations.
+- PASS: 23 new focused unit checks; source checker reports zero violations.
 - PASS: strict mypy, 100 source files.
 - Pending: full backend tests/coverage, Ruff final checks, contracts and final-head CI.
 - NOT RUN locally: PostgreSQL and Compose. Docker socket inaccessible in sandbox; outside
@@ -128,6 +128,8 @@ Commands (backend): `ruff check .`, `ruff format --check .`, `mypy src`,
 
 ## 15. Known Limitations
 
+Owner decision, 16 November 2026: keep AI-07 scope and retain the explicit acceptance gap;
+shared grants/production context are not added to this PR.
 Full pipeline execution under a restricted process profile is not established. The
 permission-gap test documents current migrated behavior; its success is not full task acceptance.
 A one-time SET on a caller session cannot scope pipeline transactions. Production context/grant

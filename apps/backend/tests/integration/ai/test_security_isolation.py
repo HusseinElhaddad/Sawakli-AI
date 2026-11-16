@@ -190,3 +190,23 @@ def test_restricted_ai_can_publish_owned_forecast_but_not_foreign_row(restricted
                 )
             )
         assert error.value.orig.sqlstate == "42501"
+
+
+def test_input_transaction_rejects_actual_write(security_case, monkeypatch):
+    _, _, requests = security_case
+    original = pipeline.DatabaseDataLoader.load_metrics
+    observed = []
+
+    def read(self, *args, **kwargs):
+        with pytest.raises(sa.exc.InternalError) as error:
+            with self._session.begin_nested():
+                self._session.execute(sa.text("UPDATE daily_metrics SET spend=spend WHERE false"))
+        assert error.value.orig.sqlstate == "25006"
+        observed.append(True)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(pipeline.DatabaseDataLoader, "load_metrics", read)
+    assert (
+        pipeline.run_pipeline(requests[0], cancellation=lambda: False).status == RunStatus.SUCCESS
+    )
+    assert observed == [True]

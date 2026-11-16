@@ -11,7 +11,9 @@ SENSITIVE = {"users", "oauth_connections", "connector_tokens", "raw_api_response
 SYMBOLS = (
     SENSITIVE | {f"{name}_table" for name in SENSITIVE} | {"User", "OAuthConnection"}
 )
-SQL_TABLE = re.compile(r'\b(?:from|join|update|into)\s+"?(\w+)"?', re.IGNORECASE)
+SQL_TABLE = re.compile(
+    r'\b(?:from|join|update|into)\s+(?:"?\w+"?\.)?"?(\w+)"?', re.IGNORECASE
+)
 
 
 def inspect_source(source: str) -> list[tuple[int, str]]:

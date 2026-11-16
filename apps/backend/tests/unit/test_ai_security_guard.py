@@ -18,6 +18,8 @@ CHECK = runpy.run_path(str(Path(__file__).resolve().parents[4] / "scripts/check_
         "from sawakli.db.tables import connector_tokens_table as t",
         "query = tables.users.select()",
         "q = 'SELECT * FROM users'",
+        "q = 'SELECT * FROM public.users'",
+        'q = \'SELECT * FROM "public"."connector_tokens"\'',
         "q = 'SELECT * FROM campaigns JOIN oauth_connections ON true'",
     ],
 )

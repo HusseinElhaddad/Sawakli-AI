@@ -1,6 +1,6 @@
 # AI-07 — AI Security, Organization Isolation and Model Tests: Execution Plan
 
-Prepared: 16 November 2026, Africa/Cairo. **Planning deliverable; implementation has not started in this session.**
+Prepared: 16 November 2026, Africa/Cairo. **Original preimplementation plan; execution now proceeds in AI-07. Historical planned status statements below are retained as the baseline, not current test results.**
 
 Saved Notion plan: [Detailed execution plan and readiness assessment](https://app.notion.com/p/41a7de83a91b81c0ae8bd5bf5ee6674c).
 
@@ -297,3 +297,9 @@ Order: A → B/C → D → E → F → G. Independent source/coverage work conti
 - [ ] Existing model benchmark and backend/frontend/contracts/Compose/migration gates pass on the exact final head with zero backend skips.
 - [ ] Complete 17-section task document, execution plan and docs index are reconciled with actual results.
 - [ ] Independent review, required merge and Notion evidence update complete before task Done. No automatic merge.
+
+## Execution scope decision — 16 November 2026
+
+Hussein explicitly chose to keep AI-07 focused and retain the restricted-profile pipeline
+acceptance gap. Shared grant/profile and production context changes remain with owning tasks.
+See [current technical evidence](../AI-07-security-isolation-and-model-tests.md).
