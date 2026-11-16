@@ -122,8 +122,9 @@ Base: `8590e23846801d16fe559809f6698a80a6af4b2f`. Python 3.12 isolated environme
 - PASS: AI statement coverage **94.25%**, 1509/1601 statements covered, 92 missing.
   XML/HTML and JUnit are in the `ai-security-coverage` artifact (14-day retention).
   Source includes all AI files with no custom omit list or added no-cover pragmas.
-  Coverage.py's default exclusions account for 16 pre-existing stub/protocol lines;
-  no exclusions were introduced to obtain this result.
+  The report excludes 16 physical lines: existing protocol stubs/spacing and two
+  pre-existing no-cover fallback raises in recommendations/explain.py. AI-07 adds
+  no exclusions or pragmas; those inherited exclusions are explicitly disclosed.
 - PASS: Ruff lint/format, source guard, strict mypy; all six contract validators/negative
   cases; frontend checks; Compose Integration; PR documentation governance; whitespace.
 - PASS: actual PostgreSQL migration round-trip, **23 → 0 → 23** tables.
