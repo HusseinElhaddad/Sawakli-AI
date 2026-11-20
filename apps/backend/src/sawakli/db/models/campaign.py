@@ -29,8 +29,13 @@ class Campaign(Base):
     organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
+    
     # No ForeignKey here: there is no DataSource model yet, and SQLAlchemy would error.
-    data_source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    # data_source_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    
+    data_source_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False
+    )
     external_id: Mapped[str | None] = mapped_column(Text)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     platform: Mapped[Platform] = mapped_column(
