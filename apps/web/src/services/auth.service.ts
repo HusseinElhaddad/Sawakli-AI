@@ -1,26 +1,17 @@
-import type { AuthResponse, MeResponse, RegisterResponse } from '@/types'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-
-async function request<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init.headers },
-  })
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null
-    throw new Error(body?.detail ?? 'The request could not be completed.')
-  }
-
-  return response.json() as Promise<T>
-}
+import { apiRequest } from '@/lib/api-client'
+import type { AuthResponse, MeResponse, Organization, User } from '@/types'
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  return request<AuthResponse>('/api/auth/login', {
+  return apiRequest<AuthResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+    headers: { 'Content-Type': 'application/json' },
   })
+}
+
+type RegisterResponse = {
+  user: User
+  organization: Organization
 }
 
 export async function register(
@@ -29,15 +20,21 @@ export async function register(
   password: string,
   organizationName: string,
 ): Promise<RegisterResponse> {
-  return request<RegisterResponse>('/api/auth/register', {
+  return apiRequest<RegisterResponse>('/api/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ name, email, password, organization_name: organizationName }),
+    body: JSON.stringify({
+      name,
+      email,
+      password,
+      organization_name: organizationName,
+    }),
+    headers: { 'Content-Type': 'application/json' },
   })
 }
 
-export async function readMe(accessToken: string): Promise<MeResponse> {
-  return request<MeResponse>('/api/auth/me', {
+export function readMe(accessToken: string): Promise<MeResponse> {
+  return apiRequest<MeResponse>('/api/auth/me', {
     method: 'GET',
-    headers: { Authorization: `Bearer ${accessToken}` },
+    accessToken,
   })
 }

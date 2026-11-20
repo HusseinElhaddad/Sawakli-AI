@@ -8,14 +8,11 @@ export type User = {
 export type AuthResponse = {
   user: User
   access_token: string
-}
-
-export type RegisterResponse = {
-  user: User
-  organization: import('./organization').Organization
+  token_type: string
 }
 
 export type MeResponse = {
   user: User
-  organization: import('./organization').Organization
+  organization: Organization
 }
+import type { Organization } from './organization'

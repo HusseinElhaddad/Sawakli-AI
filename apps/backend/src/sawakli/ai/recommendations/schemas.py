@@ -15,9 +15,10 @@ previous revision of this module defined its own ``ForecastPoint`` stand-in befo
 that has been removed now that the real contract is available (see
 ``docs/ai/AI-04-recommendation-engine.md`` Section 3).
 
-Until AI-02 lands, callers construct ``AnomalySignal`` directly from fixtures or tests. Once it
-ships, whoever wires the pipeline together (AI-06) is expected to map its real output rows onto
-these same fields — no shape change should be required on this side.
+AI-02 is now merged, but its campaign-day diagnostic is not this per-metric shape.
+ARCH-03's ``sawakli.ai.integration.to_anomaly_signal`` requires explicit MetricEvidence
+and maps critical campaign diagnostics to this existing shape. AI-06 must extract real
+metric evidence and wire the adapter; see docs/contracts/ai-pipeline-and-persistence.md.
 """
 
 from __future__ import annotations

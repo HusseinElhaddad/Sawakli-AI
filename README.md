@@ -23,33 +23,24 @@ integrated.
 
 ## Current implementation
 
-Snapshot reviewed on **29 September 2026** against `main` at
-[`c2b3b62`](https://github.com/elfaroukomaradmission-a11y/Sawakli-AI/commit/c2b3b6260fd9c936363e16bdf15e814b319d9355).
-An implemented module does not imply that it is connected to the product flow.
+Reviewed on **15 November 2026** against `main` at
+[`8c7dd67`](https://github.com/HusseinElhaddad/Sawakli-AI/commit/8c7dd678c808f0760285c39eed364887faed960c).
+Implemented modules are distinguished from remaining product integration.
 
-| Area | Present on `main` | Integration still required |
+| Area | Implemented | Remaining integration |
 |---|---|---|
-| Web | Next.js routes, layout, typed services, and mock campaign/recommendation screens | Real API client, authentication, upload, and analytical data serving |
-| API | Registration, login, current-user, analysis-refresh, and job-status routes | Campaign/dashboard and AI-output APIs; production ingestion handoff |
-| Data and connectors | CSV parser, OAuth encryption/token utilities, staging adapters, entity normalization and upserts | Upload-to-raw-to-canonical ingestion; live GA4 adapter |
-| AI-01 | Organization-scoped CSV/DB loaders and deterministic feature engineering | Production pipeline wiring; features are computed in memory |
-| AI-03 | Forecasting, fallback behavior, intervals, and backtest metrics | Output persistence and Worker/API integration |
-| AI-04 | Rule-based recommendations and explanation templates | Real anomaly adapter and recommendation persistence |
-| Worker | PostgreSQL job claiming, lifecycle, retry, timeout, and polling | Real task dispatch and AI execution; the current executor is a simulation placeholder |
-| Database | Alembic schema, roles, constraints, indexes, and demo-data migrations | Runtime role verification and remaining integration contracts |
+| Web | Next.js layout, session/API client, API proxy, campaign/dashboard data path | Anomaly, recommendation and simulation services still contain mocks; full output serving remains API-05/UI work |
+| API | Auth, campaign/dashboard, CSV setup/upload, refresh enqueue and job polling | Stored AI-output APIs and complete product flow |
+| Connector/Data | CSV parsing and atomic raw-to-canonical ingestion, entity normalization, OAuth utilities | Live provider adapters and runtime-role rollout |
+| AI-01 through AI-05 | Features, ensemble anomalies, forecasts, explanation rules and proportional simulations | API/UI consumption of stored analytical outputs |
+| AI-06 | Real pipeline, structured evidence, baseline preparation, atomic PostgreSQL publication and exact replay | Production Worker dispatch and timeout/cancellation control wiring (WORK-04) |
+| Worker | Claim/lifecycle/retry/timeout/polling and heartbeat | Executor still proposes simulated outcomes; it does not dispatch the real AI pipeline |
+| Database | Versioned migrations, AI execution metadata, constraints/indexes and demo facts | Least-privilege runtime logins/RLS acceptance remains deferred under ADR 0001 |
 
-AI-02 anomaly detection is proposed in [PR #19](https://github.com/elfaroukomaradmission-a11y/Sawakli-AI/pull/19),
-which is open and unmerged at this snapshot. The anomaly and simulation packages on `main` are
-scaffolds, and `ai/pipeline.py` is empty. AI-05 simulation, AI-06 orchestration/persistence, and
-AI-07 security/isolation acceptance remain later work.
-
-Other open implementation PRs are
-[#16](https://github.com/elfaroukomaradmission-a11y/Sawakli-AI/pull/16) (UI/data/E2E work) and
-[#18](https://github.com/elfaroukomaradmission-a11y/Sawakli-AI/pull/18) (connector setup/upload APIs).
-Their code is not part of `main`. The
-[TRK-06 baseline register](docs/testing/TRK-06-integrated-baseline-register.md) records the audited
-ingestion, evaluation, contract, and CI gaps; consult its dated evidence before treating a PR or
-task as accepted.
+AI-06 is merged through [PR #35](https://github.com/HusseinElhaddad/Sawakli-AI/pull/35).
+Use the [documentation index](docs/README.md) and current source for implementation state.
+The [TRK-06 register](docs/testing/TRK-06-integrated-baseline-register.md) is dated historical
+evidence; its old open-PR and CI-gap descriptions are not the current baseline.
 
 ## Architecture and repository layout
 
@@ -64,18 +55,19 @@ flowchart TD
     API --> DB["PostgreSQL: facts and jobs"]
     Worker["Python Worker"] --> DB
     Worker -. "Planned execution handoffs" .-> Modules["Internal AI, Connector, and Data modules"]
-    Modules -. "Planned integrated output flow" .-> DB
+    Modules -->|"AI-06 publishes AI outputs; Data writes canonical facts"| DB
 ```
 
-The diagram describes the runtime boundary and intended handoffs. The current Web uses mock
-services; the Worker does not yet run the complete analytical pipeline.
+The diagram distinguishes the still-planned Worker dispatch from the implemented internal
+modules. Web combines real API paths with explicitly mocked AI-output services. AI-06 can
+publish outputs, but Worker dispatch does not yet call it.
 
 | Path | Purpose |
 |---|---|
 | `apps/web/` | Active Next.js frontend; React, TypeScript, React Query, Vitest |
 | `apps/backend/src/sawakli/api/` | FastAPI application and HTTP routes |
 | `apps/backend/src/sawakli/worker/` | PostgreSQL job processing and scheduling |
-| `apps/backend/src/sawakli/ai/` | Features, forecasting, recommendations, and future analytical modules |
+| `apps/backend/src/sawakli/ai/` | Features, anomalies, forecasts, recommendations, simulation and pipeline persistence |
 | `apps/backend/src/sawakli/connectors/` | CSV parsing, OAuth utilities, provider adapters |
 | `apps/backend/src/sawakli/data/` | Staging, validation, normalization, and canonical-data writes |
 | `apps/backend/src/sawakli/db/`, `apps/backend/src/sawakli/shared/` | Database access, models, shared enums/types and contract scaffolds |
@@ -86,10 +78,11 @@ services; the Worker does not yet run the complete analytical pipeline.
 | `.github/` | CI, documentation governance, contribution templates, and CODEOWNERS |
 | `docker-compose.yml` | Active local stack and test database |
 
-The root `agent/`, `api/`, `connector/`, `database/`, `ui/`, and `worker/` directories are legacy
-scaffolds. The current Compose stack builds from `apps/`; use those active applications for
-development. `infrastructure/` and the root `Makefile` currently provide scaffolding rather than
-a complete operational command interface.
+The obsolete root runtime trees were removed by DEV-02. Build and run from `apps/`;
+there is no root Makefile or separate database HTTP service. The
+[layout and cleanup inventory](docs/architecture/repository-layout.md) records retained
+future-task/package markers and every removed path. PostgreSQL schema remains owned
+by the active Alembic history, not the removed prototype SQL.
 
 ## Run with Docker Compose
 
@@ -102,7 +95,7 @@ a complete operational command interface.
 Run these commands from the repository root:
 
 ```bash
-git clone https://github.com/elfaroukomaradmission-a11y/Sawakli-AI.git
+git clone https://github.com/HusseinElhaddad/Sawakli-AI.git
 cd Sawakli-AI
 cp .env.example .env
 ```
@@ -126,11 +119,11 @@ they do not create a login user for the seeded organization.
 | [localhost:8000/health](http://localhost:8000/health) | API process health |
 | [localhost:8000/docs](http://localhost:8000/docs) | FastAPI interactive API documentation |
 
-For the current mock UI, the synthetic demo login is `demo@fashionbrandx.com` / `demo`.
-It is defined in the frontend service and is separate from real API authentication. To exercise
-the backend auth flow, register a separate test account through `/api/auth/register` in the API
-documentation. Healthy containers and a working mock dashboard do not prove ingestion or AI
-integration.
+Use the real registration/login flow for API-backed paths. The demo workspace is a
+separate UI entry; do not confuse it with an authenticated seeded API user. For a
+repeatable Nour demo API login, follow `apps/backend/tests/fixtures/seed.py` and supply
+SAWAKLI_DEMO_PASSWORD locally. Container health is an infrastructure smoke check,
+not proof of full CSV-to-AI-to-dashboard integration.
 
 ```bash
 docker compose logs --tail=100 api worker web
@@ -148,7 +141,7 @@ Use [`.env.example`](.env.example) as the starting point; keep real `.env` files
 | `DATABASE_URL` | Host Python/Alembic connection; Compose overrides it with the internal `postgres:5432` address |
 | `JWT_SECRET`, `JWT_EXPIRE_MINUTES` | API authentication settings; forwarded to API and Worker by Compose |
 | `API_PORT`, `WEB_PORT` | Host ports, defaulting to `8000` and `3000`; `WEB_PORT` is a Compose option absent from the example file |
-| `NEXT_PUBLIC_API_URL` | Intended browser API base URL; current frontend services still use mocks |
+| `NEXT_PUBLIC_API_URL` | API base configuration; the Next.js proxy also reads API_INTERNAL_URL; some AI-output services remain mocked |
 | `CONNECTOR_TOKEN_ENCRYPTION_KEY` | Required when using OAuth token utilities; example placeholder is deliberately invalid |
 | `APP_ENV`, `APP_NAME`, `API_HOST`, `POSTGRES_HOST` | Listed in the example; the current Compose commands/configuration do not consume all of them |
 
@@ -211,21 +204,24 @@ Start the test DB from the repository root:
 docker compose up -d --wait postgres-test
 ```
 
-Then, in the activated backend environment:
+In the activated backend environment, prepare two disposable databases on the test
+server using the guarded harness (the example test password is synthetic):
 
 ```bash
+export DATABASE_URL='postgresql+psycopg://postgres:change-me@localhost:5434/sawakli_regression_test'
+export TEST_DATABASE_URL='postgresql+psycopg://postgres:change-me@localhost:5434/sawakli_integration_test'
+python scripts/integration_harness.py fresh-db DATABASE_URL TEST_DATABASE_URL
 cd apps/backend
-export DATABASE_URL='postgresql+psycopg://postgres:change-me@localhost:5434/sawakli_test'
-export TEST_DATABASE_URL="$DATABASE_URL"
 ruff check .
 ruff format --check .
 mypy src
-pytest
+pytest -rs --junitxml=/tmp/sawakli-pytest-results.xml
 ```
 
-`TEST_DATABASE_URL` enables optional PostgreSQL integration tests in addition to the primary
-`DATABASE_URL` fixture connection. In PowerShell, use `$env:DATABASE_URL = '...'` and
-`$env:TEST_DATABASE_URL = $env:DATABASE_URL` for the equivalent assignments.
+Recreate the regression database before repeating the full suite: existing client
+fixtures delete seeded organizations. The harness refuses non-disposable database
+names and verifies the connected database. TEST_DATABASE_URL is needed for the full
+PostgreSQL suite; CI rejects skipped tests. Never use development data for this setup.
 
 Frontend checks, from `apps/web`:
 
@@ -242,13 +238,19 @@ pushes to `main`/`develop` and on pull requests. PRs also run documentation gove
 exempted by the repository workflow. The integration job migrates PostgreSQL and checks container
 health plus API connectivity; it is not the complete product E2E acceptance test.
 
-Known verification limits are recorded in the [baseline register](docs/testing/TRK-06-integrated-baseline-register.md):
-backend dependencies use ranges without a lockfile, `TEST_DATABASE_URL` is not set in CI, and
-contract validators are not wired into CI (some are placeholders). Check actual workflow results
-and skipped tests rather than assuming the entire acceptance suite ran.
+CI also runs `node scripts/run-contracts.mjs`, including deliberate negative cases,
+prepares TEST_DATABASE_URL, rejects skipped backend tests and runs the full migration
+round-trip. Locally, run the root contract command with the backend Python environment
+on PATH. The round-trip harness requires ROUNDTRIP_DATABASE_URL on a **separate disposable
+PostgreSQL server**: historical downgrade drops cluster-wide roles. See
+[scripts/integration_harness.py](scripts/integration_harness.py) for its safeguards.
+Backend dependencies retain bounded ranges without a lockfile; dependency policy and
+security updates are outside this structural cleanup.
 
 ## Technical documentation
 
+- [Repository layout and cleanup inventory](docs/architecture/repository-layout.md)
+- [DEV-02 technical documentation](docs/architecture/DEV-02-repository-structure-cleanup.md)
 - [Documentation index](docs/README.md)
 - [Documentation standard](docs/DOCUMENTATION_STANDARD.md)
 - [AI-01 data access and features](docs/ai/AI-01-feature-pipeline.md)
@@ -287,7 +289,7 @@ Graduation project at **Helwan University, Faculty of Engineering**.
 | Connector and Data | Youssef Halawa |
 | Worker | El-Farouk Omar |
 | System QA | Mohamed Hassan |
-| Supervisor | Prof. Samar A. Said |
+| Supervisor | Prof. Rasha Fathy Aly |
 
 Track ownership follows the revised execution plan. Original implementation and PR authors remain
 credited in Git history and task evidence.

@@ -2,6 +2,20 @@
 
 ## 1. Overview
 
+**14 November 2026 AI-06 handoff:** the [orchestrator task document](AI-06-pipeline-orchestrator.md)
+records the real composition/persistence adapter and PostgreSQL stored/replay evidence.
+Statements below about missing AI-06 wiring/evidence describe the earlier task checkpoint;
+AI-06 implementation is on its feature branch pending review/merge. WORK-04 production
+Worker dispatch and API-05 serving are still separate work. ADR 0002 remains prepared
+for review. This note records evidence, not a task-status or approval change.
+
+
+**23 October integration handoff:** ARCH-03 now supplies a pure, explicit-evidence
+adapter and [contract v1](../contracts/ai-pipeline-and-persistence.md), prepared for
+affected-owner review. AI-02's algorithm and diagnostic shape are unchanged. AI-06
+must expose actual metric contributions and wire the adapter; no production
+pipeline or per-metric model-quality result is claimed by this handoff.
+
 AI-02 consumes AI-01 `FeatureRecord` histories and returns one immutable
 `AnomalyResult` per organization/campaign/day. It combines robust Z-score, IQR
 and Isolation Forest evidence into a score, severity, performance direction and

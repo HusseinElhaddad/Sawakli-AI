@@ -58,15 +58,16 @@ refuses (before connecting) any database whose name is not plain `a-z0-9_` endin
 
 ## 6. Supervisor demo flow (QA-04 story)
 
-Status as verified on `main` at `622ed92` (14 Oct 2026). Re-check each blocked row against the
-current board before the demo.
+Status as verified on `main` at `622ed92` (14 Oct 2026); the Login (browser) and Dashboard rows were
+re-verified on the UI-04 branch at `0f8b3fe` on 21 Oct 2026. Re-check each blocked row against the current board
+before the demo.
 
 | Step | Runnable today? | Evidence / blocking task |
 |---|---|---|
 | Login (API) | Yes | Section 5 |
-| Login (browser) | No | Web login is still a mock (`apps/web/src/lib/mock-auth.ts`); needs ARCH-06 (Abdulrahman Ehab) and UI-04 (Mohamed Hassan) |
+| Login (browser) | Yes, once PR #22 (UI-02/UI-03, Abdulrahman Ehab) is merged | Real login through `lib/session.ts` and `/api/auth/me` comes from PR #22. Verified live in a browser as `demo@nourfashion.example` on commit `0f8b3fe` (branch `feature/UI-04-dashboard-kpis-campaign-table`, 21 Oct 2026), which is stacked on PR #22. Until PR #22 merges, `main` still has the mock login |
 | Data source / demo data | Yes (API, by tests) | `POST /api/connectors/setup` and CSV upload are exercised by `apps/backend/tests/test_connectors_api.py` (passing); not run live during QA-00. Seeded 90-day Nour dataset from migration 0009 (verified live) |
-| Dashboard | No | API-02 (Ahmed Ibrahem), UI-04 (Mohamed Hassan) |
+| Dashboard | Yes, once PR #22 and UI-04 are merged | KPI cards and the campaign table render live API-02 data; verified against SQL on the seeded Nour dataset on commit `0f8b3fe` (branch `feature/UI-04-dashboard-kpis-campaign-table`, 21 Oct 2026). See [UI-04](../ui/UI-04-dashboard-kpis-and-campaign-table.md) §14. The anomaly and recommendation panels on the dashboard are still sample data |
 | Analysis refresh queued | Yes (API) | Section 5.3; Worker-to-AI execution needs WORK-04 (El-Farouk Omar) |
 | Anomaly / forecast | No | AI-02 (PR #19, open), AI-06 persistence (Hussein Elhaddad), API-05 (Ahmed Ibrahem) |
 | Recommendation | No | AI-06 (Hussein Elhaddad), API-05 (Ahmed Ibrahem) |

@@ -3,40 +3,47 @@
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, LineChart, AlertTriangle } from 'lucide-react'
-import { useCampaignDetails } from '@/hooks/useCampaigns'
+import { useCampaign } from '@/hooks/useCampaigns'
 import { useAnomalies } from '@/hooks/useAnomalies'
+import { useRequireSession } from '@/hooks/useSession'
+import { ApiError } from '@/lib/api-client'
+import { PlatformBadge, StatusBadge } from '@/features/dashboard/components/Badges'
+import { ErrorState, LoadingState } from '@/features/dashboard/components/DataState'
+import { formatDate, formatMoney, NO_VALUE } from '@/features/dashboard/format'
+
+function isNotFound(error: unknown): boolean {
+  // 404: missing or another organization's campaign; 422: the id is not a valid UUID.
+  return error instanceof ApiError && (error.status === 404 || error.status === 422)
+}
 
 export default function CampaignDetailPage() {
   const params = useParams()
-  const id = params.id as string
-  const { data: details, isLoading } = useCampaignDetails(id)
+  const id = typeof params.id === 'string' ? params.id : ''
+  const session = useRequireSession()
+  const { data: campaign, isPending, isError, error, refetch } = useCampaign(session?.organization.id, session?.access_token, id)
   const { data: allAnomalies } = useAnomalies()
+  // Sample anomalies are keyed by mock ids, so they only match once API-05 provides real ones.
   const anomalies = allAnomalies?.filter((a) => a.campaign_id === id) ?? []
 
-  if (isLoading) {
+  if (isError && isNotFound(error)) {
     return (
-      <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}>
-        Loading campaign details...
+      <div className="data-state">
+        <strong>Campaign not found.</strong>
+        <p>It may have been removed, or it belongs to another workspace.</p>
+        <Link className="btn btn-secondary" href="/campaigns"><ArrowLeft /> Back to campaigns</Link>
       </div>
     )
   }
 
-  if (!details) {
-    return (
-      <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 13, color: 'var(--color-text-muted)' }}>
-        Campaign not found.
-      </div>
-    )
-  }
+  if (isError) return <ErrorState error={error} onRetry={() => void refetch()} />
 
-  const campaign = details.campaign
+  if (isPending || !campaign) return <LoadingState label="Loading campaign details…" />
 
-  const kpis = [
-    { label: 'Spend', value: `${campaign.spend.toLocaleString()} EGP` },
-    { label: 'Clicks', value: campaign.clicks.toLocaleString() },
-    { label: 'Conversions', value: campaign.conversions.toLocaleString() },
-    { label: 'CPA', value: `${campaign.cpa.toFixed(1)} EGP`, danger: campaign.cpa > 150 },
-    { label: 'ROAS', value: `${campaign.roas.toFixed(1)}x`, success: campaign.roas >= 4 },
+  const details = [
+    { label: 'Objective', value: campaign.objective ?? NO_VALUE },
+    { label: 'Budget', value: formatMoney(campaign.budget) },
+    { label: 'Start date', value: campaign.start_date ? formatDate(campaign.start_date) : NO_VALUE },
+    { label: 'End date', value: campaign.end_date ? formatDate(campaign.end_date) : NO_VALUE },
   ]
 
   return (
@@ -51,21 +58,30 @@ export default function CampaignDetailPage() {
         <span>{campaign.name}</span>
       </div>
 
-      {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 14, marginBottom: 24 }}>
-        {kpis.map((k) => (
-          <div key={k.label} className="kpi-card">
-            <div className="kpi-label">{k.label}</div>
-            <div
-              className="kpi-value"
-              style={{
-                color: k.danger ? 'var(--color-error)' : k.success ? 'var(--color-success)' : undefined,
-              }}
-            >
-              {k.value}
+      {/* Campaign header from API-02 */}
+      <div className="card">
+        <div className="campaign-heading">
+          <h2>{campaign.name}</h2>
+          <PlatformBadge platform={campaign.platform} />
+          <StatusBadge status={campaign.status} />
+        </div>
+        <dl className="campaign-facts">
+          {details.map((d) => (
+            <div key={d.label}>
+              <dt>{d.label}</dt>
+              <dd>{d.value}</dd>
             </div>
-          </div>
-        ))}
+          ))}
+        </dl>
+        <p className="muted-line">
+          Spend, clicks, conversions and ratios for this campaign are in the{' '}
+          <Link href="/campaigns">campaign table</Link>.
+        </p>
+      </div>
+
+      <div className="demo-notice" role="status">
+        <strong>Sample content</strong>
+        <span>The campaign performance view below arrives with UI-05.</span>
       </div>
 
       {/* Performance chart placeholder */}

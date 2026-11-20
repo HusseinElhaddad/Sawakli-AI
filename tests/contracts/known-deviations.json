@@ -8,7 +8,7 @@
       "field": "value",
       "kind": "breaking-mismatch",
       "mismatch": "nullable_in_model",
-      "reason": "ForecastRecord.value is None for insufficient_history (ai/forecasting/engine.py:45) but forecasts.value is NUMERIC NOT NULL (0004_ai_layer_tables.py:76); persisting such a record would fail. Decide: skip, map, or change the contract before AI-06 persists forecasts.",
+      "reason": "ForecastRecord.value is None for insufficient_history while forecasts.value is NUMERIC NOT NULL. ARCH-03 defines and tests persistable_forecasts to omit these placeholders without zero fabrication. The in-memory type still differs intentionally; AI-06 must use that boundary before writing. Retain this entry until the production persistence boundary is validated.",
       "task": "AI-06 (AI-03 origin)",
       "owner": "Hussein Elhaddad (AI-06); Abdulrahman Ehab (AI-03)"
     },

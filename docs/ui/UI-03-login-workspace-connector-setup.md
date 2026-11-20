@@ -1,258 +1,169 @@
-# UI-03 — Build Login, Workspace and Connector Setup UI
+# UI-03 — Login, Workspace, and CSV Connector Setup
 
 ## 1. Overview
 
-This task implements the first-use web entry flow for Sawakli AI. It gives a user a usable path from login or account creation into an organization workspace, then into demo data or CSV source setup.
-
-The flow belongs to the Web layer and consumes the existing Backend authentication contract. It displays connection state and import metadata without rendering passwords, access tokens, OAuth codes, or provider secrets.
-
-Status: **Implemented** for the web entry and CSV import experience. The authenticated CSV path now creates a source, uploads the file, persists raw evidence, normalizes canonical facts, and reports source freshness. Provider OAuth remains a follow-up.
+UI-03 provides account/workspace creation, login, and an authenticated CSV import flow. On a
+successful API response, the UI reports imported rows, sync status, and last-sync time without
+claiming that the current dashboard cards are real data.
 
 ## 2. Scope
 
 ### In Scope
 
-- Login against the existing `/api/auth/login` endpoint
-- Authenticated workspace hydration through `/api/auth/me`
-- Account and first-workspace creation through `/api/auth/register`
-- Explicit demo workspace entry
-- CSV file selection and authenticated upload through the Connector API
-- Safe connector status display for supported OAuth connector types
-- Loading, error, unauthorized/request-failure, empty-source, and selected-source states
-- Focused flow tests for source selection and safe status presentation
+- First-workspace creation through API-01 registration and authenticated login/current-user lookup.
+- Optional CSV selection, import progress, safe errors, parsed-row count, warnings, sync status, and freshness.
+- An in-product approved sample CSV download and a short required-column explanation.
+- Explicit unavailable OAuth state with no secret/token input.
 
 ### Out of Scope
 
-- Adding a new Backend workspace-list or organization-switch endpoint
-- Multi-organization switching and provider OAuth exchange
-- Implementing OAuth redirects, provider token exchange, or token storage
-- Displaying provider credentials or connection secrets in the browser
-- Changing dashboard analytics or campaign data contracts
-
-Workspace selection in this version means creating the authenticated user’s first organization through the approved registration path, or entering the existing organization returned by `/api/auth/me`. Multi-organization switching requires a Backend contract that is not present today.
+- Multi-workspace selection; API-01 has no list/switch contract.
+- Implementing raw persistence, staging, normalization, canonical upsert, or source-state writes.
+  The current Backend connector/data path owns them.
+- Provider OAuth authorization/exchange, owned by Connector/CONN-03.
+- Real dashboard KPIs and campaigns, owned by API-02/UI-04.
 
 ## 3. Prerequisites
 
-| Task / Contract | Why Required |
+| Task / contract | Why required |
 |---|---|
-| API-01 authentication | Defines login, registration, bearer token, and authenticated user behavior |
-| API-03 organization access | Defines organization identity returned by the authenticated `/me` endpoint |
-| UI-02 application shell | Provides the Next.js route groups, styling tokens, and dashboard destination |
-| `apps/backend/src/sawakli/api/schemas/auth.py` | Current source of truth for login, register, and `/me` response fields |
-| `apps/backend/src/sawakli/api/routes/auth.py` | Current source of truth for authentication endpoint paths and error behavior |
+| UI-02 | Provides session, API client, same-origin proxy, and application shell. |
+| API-01 | Defines registration, login, current-user, and organization scope. |
+| Merged PR #16 connector route | Defines CSV setup/upload and its sync response. |
+| Data/Connector pipeline | Persists raw evidence and canonical rows behind the API route. |
 
 ## 4. Architecture
 
 ```text
-Login or registration form
-        |
-        v
-Typed Web auth service
-        |
-        v
-FastAPI /api/auth contract
-        |
-        v
-Session with user + organization identity
-        |
-        v
-Source setup: demo selection or CSV selection
-        |
-        v
-Dashboard workspace
+Create workspace or sign in
+↓
+API-01 authenticated organization
+↓
+POST connector setup
+↓
+POST CSV upload
+↓
+Backend raw → staging → canonical import
+↓
+UI shows success, sync status, and last sync time
 ```
-
-Ownership boundaries:
-
-- Web owns form state, navigation, safe status display, and browser-side session presentation.
-- Backend owns authentication, password verification, organization creation, and authenticated organization scope.
-- Connector/Data layers own provider authorization, token handling, CSV parsing, staging, normalization, and persistence.
-- This task does not duplicate connector token handling or invent a second organization contract.
 
 ## 5. Inputs
 
-| Field / Input | Type | Required | Source | Description |
-|---|---|---|---|---|
-| `email` | string | Yes | Login/register form | User email sent to the Backend auth contract |
-| `password` | string | Yes | Login/register form | Password sent only in the HTTPS API request |
-| `name` | string | Yes for registration | Registration form | User display name |
-| `organization_name` | string | Yes for registration | Workspace setup form | Name of the first organization/workspace |
-| `access_token` | string | Yes after login | Backend login response | Used in the Authorization header for `/me`; never rendered |
-| `File` | browser `File` | Optional | CSV chooser | Client-side file selection; only filename, size, and readiness are displayed |
-| demo choice | `'demo'` | Optional | Source setup action | Selects the prepared demo entry path |
-
-Validation:
-
-- Required form fields use native browser validation.
-- Registration password requires at least eight characters in the UI.
-- CSV selection accepts `.csv` / `text/csv` only.
-- Continue is blocked until either demo data or a CSV is selected.
+| Input | Type | Required | Source | Meaning |
+|---|---|---:|---|---|
+| name/email/password/workspace | strings | registration | user | API-01 fields. |
+| CSV file | `File` | upload | user | `.csv` extension required by UI. |
+| bearer token | string | protected calls | API-01 | Establishes organization scope. |
 
 ## 6. Outputs
 
-| Field / Output | Type | Nullable | Consumer | Description |
-|---|---|---|---|---|
-| `AuthResponse` | typed object | No | Session setup | Backend login response containing user and access token |
-| `RegisterResponse` | typed object | No | Session setup | Backend registration response containing user and organization |
-| `MeResponse` | typed object | No | Session setup | Authenticated user and organization identity |
-| session | browser session record | Yes before auth | Dashboard/setup routes | Stores user, organization, and access token for the current demo app shell |
-| source state | `'demo' \| 'csv' \| null` | Yes | Connector setup screen | Controls safe source readiness and navigation |
-| visible source status | text/badge | No | User | Shows `Available`, `Ready to import`, or selected demo state without secrets |
+| Output | Type | Consumer | Meaning |
+|---|---|---|---|
+| session | user/org/token | UI shell | Authenticated workspace context. |
+| import result | API response | setup page | row count, warnings, sync status, last sync. |
+| UI state | local state | user | loading, error, imported, OAuth unavailable. |
 
 ## 7. Rules and Semantics
 
-- Login calls `/api/auth/login`, then `/api/auth/me`; the organization is taken from the authenticated `/me` response rather than from query parameters or user input.
-- Registration calls `/api/auth/register`, then logs in with the submitted credentials to obtain the access token required by the current session model.
-- The first-workspace path is the organization returned by registration. The current Backend contract does not expose a list/create-many workspace selector.
-- Demo data is an explicit choice and does not claim a provider connection.
-- CSV selection displays only safe local metadata: filename, size, and `Ready to import` status.
-- OAuth connector rows display availability and connector type only. No token, authorization code, or credential input is rendered.
-- The dashboard route is not opened when no source has been selected.
-- Request failures are shown as user-safe messages from the Backend `detail` field or a generic fallback; raw response bodies are not rendered.
-- CSV import success is shown only after the Backend returns a successful canonical import response.
+- `POST /api/connectors/setup` creates a CSV source.
+- `POST /api/connectors/csv/{data_source_id}/upload` receives multipart field `file`.
+- “CSV imported” is displayed only after API success with `sync_status: success`.
+- The continuation button remains disabled unless `sync_status` is `success`.
+- Import is recommended for the demo but not required to enter the workspace. “Skip for now” opens the
+  dashboard without making an API request; dashboard values remain explicitly labelled as demo data.
+- `/samples/sawakli-campaign-data.csv` is the approved user-facing example. The fixed CSV schema belongs
+  to Connector/Data; the UI presents it but does not infer arbitrary third-party column meanings.
+- The sample is a public static file and can be downloaded before authentication; it contains no
+  workspace or provider data.
+- Parser warnings are shown; raw parsed rows are not rendered.
+- A successful import means the Backend completed its current raw-to-canonical path. It does not
+  mean that dashboard mock cards have been replaced by API-02 data.
 
 ## 8. Public Interfaces
 
-### `login(email, password)`
-
-Calls `POST /api/auth/login` and returns the typed `AuthResponse`. Non-2xx responses become an error for the login screen.
-
-### `register(name, email, password, organizationName)`
-
-Calls `POST /api/auth/register` with the backend field `organization_name` and returns the typed `RegisterResponse`.
-
-### `readMe(accessToken)`
-
-Calls `GET /api/auth/me` with a bearer Authorization header and returns the authenticated user and organization. The token is not rendered in the UI.
-
-### Entry routes
-
-- `/login` — existing account login or explicit demo entry
-- `/setup/organization` — account and first-workspace creation
-- `/setup/connector` — demo/CSV source selection and safe status display
-- `/dashboard` — destination after a valid session and source choice
+- `createCsvConnector(accessToken)` — requests source setup.
+- `uploadCsv(accessToken, dataSourceId, file)` — sends multipart import request.
+- `CsvUploadResponse` — `data_source_id`, `row_count`, `parsed_rows`, `parse_warnings`,
+  `sync_status`, and `last_synced_at`.
 
 ## 9. Data Ownership
 
 ### Reads
 
-- Reads the Backend authentication responses through the typed Web auth service.
-- Reads local browser file metadata for the selected CSV.
-- Reads the local session only to determine whether the setup flow already has a session.
+- API-01 user/organization and safe connector import responses.
 
 ### Writes
 
-- Sends authentication and registration fields to the approved Backend endpoints.
-- Writes the existing browser session record used by the current app shell.
-- Does not persist CSV bytes or claim that a server import occurred.
+- Browser session only. Backend owns connector/data writes.
 
 ### Must Never Read
 
-- Provider OAuth tokens or authorization codes in the browser.
-- Database credentials, backend secrets, or another organization’s data.
+- OAuth codes, provider tokens, encryption keys, raw database data, or another organization’s source.
 
 ### Must Never Write
 
-- Provider tokens, passwords, or raw credentials into rendered UI text.
-- CSV content to an unapproved browser or API destination.
-- Organization data outside the authenticated Backend scope.
+- Raw payloads, canonical metrics, sync status, provider credentials, or organization identifiers.
 
 ## 10. Security
 
-- Passwords are sent only to the existing Backend auth endpoint and are not stored in React state after the request completes beyond the active form field.
-- Access tokens are used for the current application session but are never interpolated into visible status messages, filenames, errors, or logs.
-- Organization identity comes from the authenticated Backend response.
-- The UI does not accept an organization ID from the URL to establish scope.
-- OAuth connectors are status-only until an approved authorization endpoint exists.
-- The CSV screen uploads the selected file through the authenticated Connector API; it does not expose credentials or provider tokens.
+The UI never submits organization scope; API-01 derives it from the bearer token and the connector
+route verifies source ownership. Safe error messages are displayed without rendering secrets.
 
 ## 11. Error and Edge-Case Behavior
 
-| Case | Expected Behavior |
+| Case | Behavior |
 |---|---|
-| Missing login or registration input | Native required-field validation blocks submission |
-| Invalid credentials | Login displays a safe invalid/request failure message |
-| Duplicate registration email | Backend error detail is displayed without exposing database details |
-| Backend unavailable | Auth screen displays a safe request failure message and remains usable for retry |
-| Missing source | Continue displays an alert and keeps the user on setup |
-| Non-CSV file | Selection is cleared and the user is asked to choose a CSV |
-| Empty CSV | Backend parser rejects the file and marks the source failed without canonical rows |
-| OAuth unavailable | Connector displays availability state only; no secret field is offered |
-| Expired/invalid session | Backend `/me` failure prevents session hydration and login reports failure |
-| Token or credential error | Token is not rendered; only a generic request failure is shown |
+| Missing/non-CSV file | Block import and explain the requirement. |
+| Uploading | Disable selection/import controls. |
+| Parser/import failure | Show safe API message; source is not reported successful. |
+| Warnings | Show count and warning messages after a successful import. |
+| No session | Return to login before an unauthenticated import request. |
+| OAuth selection | State that provider authorization is unavailable; request no secrets. |
 
 ## 12. Testing
 
 ### Unit Tests
 
-- Existing frontend tests remain unchanged for the root route behavior.
-- Added `tests/entry-flow.test.tsx` to verify that the source setup blocks empty continuation and routes the selected demo path to `/dashboard` while keeping the safe-status notice visible.
+- `connector-setup.test.tsx` proves source setup, import request, successful sync display, non-CSV
+  rejection, optional skip, and approved sample download.
 
 ### Integration Tests
 
-The integrated flow is:
-
-1. Open `/login`.
-2. Choose `Open demo workspace`.
-3. Choose `Load Sawakli demo data`.
-4. Select a CSV and continue to upload it.
-5. Confirm that the API returns sync status/freshness and no credential/token text is rendered.
-
-Browser evidence was captured from the running containerized Web service for the login screen and connector/demo setup screen. The screenshots are attached to the QA handoff conversation.
+- Backend connector/data integration tests are owned by the merged Backend work.
 
 ### E2E Impact
 
-The entry routes are new/changed user-facing workflow surfaces. A Playwright or equivalent browser test should be added when the repository’s E2E runner and backend fixture are available.
+- A running stack test must register/login, upload a fixture, assert `success` and a timestamp,
+  then confirm the dashboard demo-data notice.
 
 ## 13. Verification
 
-Commands executed:
+Executed 2026-10-01 from `apps/web` after merging PR #16:
 
-```bash
-cd "D:/projects/Sawakli-AI/apps/web"; npm run type-check
-cd "D:/projects/Sawakli-AI/apps/web"; npm ci
-cd "D:/projects/Sawakli-AI/apps/web"; npm install --ignore-scripts --no-audit --no-fund
-cd "D:/projects/Sawakli-AI"; docker compose up --build -d
-cd "D:/projects/Sawakli-AI"; docker compose ps
-Invoke-WebRequest -UseBasicParsing http://localhost:8000/health
-Invoke-WebRequest -UseBasicParsing http://localhost:3000
-```
-
-Results:
-
-- `NOT RUN — frontend dependencies unavailable`: host `npm run type-check` could not find `tsc`.
-- `FAIL`: host `npm ci` exited with npm error `Exit handler never called!` before installing dependencies.
-- `NOT RUN — npm install hung and was terminated after 120 seconds`: the host dependency install remained incomplete.
-- `PASS`: `docker compose up --build -d` completed and `docker compose ps` reported API, Web, PostgreSQL, test PostgreSQL, and Worker as healthy.
-- `PASS`: `http://localhost:8000/health` returned `{"status":"ok"}`.
-- `PASS`: `http://localhost:3000` returned the changed login page with the expected form and demo-workspace link.
-- `PASS`: synthetic auth smoke test completed registration, login, and authenticated `/api/auth/me`; the bearer token was not printed.
-- `PASS`: CORS preflight for `POST /api/auth/register` returned `200` with `Access-Control-Allow-Origin: http://localhost:3000` after the API middleware fix.
-- Editor diagnostics: `PASS` for the touched TypeScript source and test files; this is not a substitute for the project scripts.
-- Screenshot evidence: `PASS` — login screen and connector/demo setup screen captured from `http://localhost:3000`.
+- `node_modules/.bin/eslint.cmd .` — PASS; two pre-existing mock-service warnings only.
+- `node_modules/.bin/tsc.cmd --noEmit` — PASS.
+- `node_modules/.bin/vitest.cmd run` — PASS; 3 files, 6 tests.
+- `node_modules/.bin/next.cmd build` — PASS.
 
 ## 14. Known Limitations
 
-- CSV upload now persists raw evidence and canonical rows through the Connector API; a larger production ingestion job and progress polling remain follow-up work.
-- Multi-organization selection/switching is not implemented because the current Backend auth contract returns one organization and exposes no organization list endpoint.
-- OAuth connector rows show availability but do not initiate provider authorization because no approved frontend/backend OAuth route is present in the current contract.
-- Full host frontend test execution and Docker build were not rerun in the latest edit because Docker Desktop was unavailable; TypeScript/editor diagnostics remain clean and the backend upload API tests passed.
+- Current dashboard KPI cards remain demo data until API-02/UI-04 consume canonical metrics.
+- The one-organization API contract cannot support a workspace selector.
+- OAuth provider authorization remains unavailable.
+- ING-01 acceptance still requires independent review of retries/idempotency, partial failures,
+  tenant isolation, reconciliation, and the ARCH-04 ownership boundary.
 
 ## 15. Follow-Up Tasks
 
-- API/Data owner — define and implement the CSV upload/import endpoint, then connect the selected file to staging and normalization.
-- API owner — define organization listing/selection and workspace creation semantics for multi-workspace accounts.
-- Connector owner — expose the approved OAuth authorization start/callback contract for GA4 and Google Ads.
-- UI owner — add Playwright evidence for login, workspace setup, demo/CSV selection, and safe status assertions.
+- ING-01 — Data/Connector — complete its remaining acceptance review/evidence.
+- API-02/UI-04 — Backend/UI — connect canonical metrics to dashboard screens.
+- CONN-03 — Connector — implement provider OAuth.
+- UI-08 — UI — unify broader empty/loading/error/export states.
 
 ## 16. References and Evidence
 
-- Backend auth schemas: `apps/backend/src/sawakli/api/schemas/auth.py`
-- Backend auth routes: `apps/backend/src/sawakli/api/routes/auth.py`
-- Auth service: `apps/web/src/services/auth.service.ts`
-- Login route: `apps/web/src/app/(auth)/login/page.tsx`
-- Workspace setup route: `apps/web/src/app/(auth)/setup/organization/page.tsx`
-- Connector setup route: `apps/web/src/app/(auth)/setup/connector/page.tsx`
-- Integrated flow test: `apps/web/tests/entry-flow.test.tsx`
-- Verification evidence: command output recorded in Section 13
-- Screenshots: `PASS` — attached in the QA handoff conversation; captured from the running Web container.
+- API-01: `apps/backend/src/sawakli/api/routes/auth.py`.
+- Connector import route: `apps/backend/src/sawakli/api/routes/connectors.py`.
+- UI service: `apps/web/src/services/connectors.service.ts`.
+- UI test: `apps/web/tests/connector-setup.test.tsx`.

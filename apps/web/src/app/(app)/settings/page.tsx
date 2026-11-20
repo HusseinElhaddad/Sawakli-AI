@@ -2,7 +2,7 @@
 
 import { Settings, User, Building2, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { clearSession, getSession } from '@/lib/mock-auth'
+import { clearSession, getSession } from '@/lib/session'
 
 export default function SettingsPage() {
   const router = useRouter()

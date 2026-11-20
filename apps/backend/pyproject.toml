@@ -16,20 +16,24 @@ dependencies = [
     "pydantic>=2.10,<3.0",
     "pydantic-settings>=2.7,<3.0",
     "alembic>=1.14,<2.0",
+
     "python-dotenv>=1.0,<2.0",
     "python-multipart>=0.0.20,<1.0",
     "passlib[bcrypt]>=1.7,<2.0",
     "bcrypt>=4.0,<5.0",
     "python-jose[cryptography]>=3.3,<4.0",
+
     "cryptography>=43,<44",
     "numpy>=2.5,<3.0",
     "pandas>=3.0,<4.0",
     "scikit-learn>=1.9,<2.0",
+
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3,<9.0",
+    "coverage>=7.6,<8",
     "pytest-asyncio>=0.25,<1.0",
     "httpx>=0.28,<1.0",
     "ruff>=0.9,<1.0",
@@ -72,3 +76,11 @@ explicit_package_bases = true
 module = ["jose", "jose.*", "passlib", "passlib.*"]
 ignore_missing_imports = true
 
+
+[tool.coverage.run]
+source = ["src/sawakli/ai"]
+
+[tool.coverage.report]
+fail_under = 70
+precision = 2
+show_missing = true

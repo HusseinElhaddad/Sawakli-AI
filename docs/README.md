@@ -14,16 +14,30 @@ Important technical information must be maintained here, not only in Notion or a
 
 ## Start Here
 
+- [Repository layout and cleanup inventory](architecture/repository-layout.md)
+- [DEV-02 repository cleanup](architecture/DEV-02-repository-structure-cleanup.md)
+- [DEV-02 execution plan](architecture/plans/dev-02-execution.md)
 - [Documentation standard](DOCUMENTATION_STANDARD.md)
 - [Technical task template](templates/TASK_DOCUMENTATION_TEMPLATE.md)
 - [AI-01 feature pipeline](ai/AI-01-feature-pipeline.md)
 - [AI-02 anomaly detection](ai/AI-02-anomaly-detection.md)
 - [AI-02 seeded reference benchmark](testing/AI-02-seeded-benchmark.md)
+- [AI-06 pipeline orchestrator](ai/AI-06-pipeline-orchestrator.md)
+- [AI-06 execution plan](ai/plans/ai-pipeline-execution.md)
+- [AI-06 implementation and learning guide](ai/guides/ai-pipeline-implementation-explained.md)
+- [AI-05 action simulator](ai/AI-05-action-simulator.md)
+- [AI-05 execution plan](ai/plans/action-simulator-execution.md)
+- [AI-05 implementation and learning guide](ai/guides/action-simulator-walkthrough.md)
+- [Action simulation calculation contract](contracts/action-simulation.md)
+- [ARCH-03 AI integration decision and evidence](architecture/ARCH-03-ai-pipeline-and-persistence-interfaces.md)
+- [AI pipeline and persistence contract v1](contracts/ai-pipeline-and-persistence.md)
+- [ADR 0002 - AI pipeline and persistence boundaries (prepared for review)](adr/0002-ai-pipeline-and-persistence-boundaries.md)
 - [ADR 0001 — Runtime boundaries and database roles](adr/0001-runtime-boundaries-and-database-roles.md)
 - [ARCH-01 runtime boundaries and database roles](architecture/ARCH-01-runtime-boundaries-and-database-roles.md)
 - [QA-00 contract validators and integration harness](testing/QA-00-contract-validators-and-integration-harness.md)
 - [CONN-01 connector package and CSV/demo parser](connectors/CONN-01-csv-demo-parser.md)
 - [CONN-02 OAuth token security and connection health](connectors/CONN-02-oauth-token-security.md)
+- [UI-04 dashboard KPI cards and campaign table](ui/UI-04-dashboard-kpis-and-campaign-table.md)
 - [Release and demo checklist](testing/release-checklist.md)
 
 ## Categories
@@ -46,3 +60,6 @@ Important technical information must be maintained here, not only in Notion or a
 Directories are created when maintained content exists. Some categories may therefore be absent.
 Existing historical directories remain valid until their content is deliberately reconciled with
 the standard.
+
+- [AI-07 security, isolation and model tests](ai/AI-07-security-isolation-and-model-tests.md)
+- [AI-07 execution plan](ai/plans/ai-security-execution.md)

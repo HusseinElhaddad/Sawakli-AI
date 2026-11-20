@@ -1,27 +1,38 @@
-// TODO: import apiClient from '@/lib/api-client'
-import type { Campaign, CampaignDetails, Anomaly } from '@/types'
-import { mockCampaigns } from '@/lib/mock-data/campaigns'
+import { apiRequest } from '@/lib/api-client'
+import type { Anomaly, Campaign, DailyMetric } from '@/types'
 import { mockAnomalies } from '@/lib/mock-data/anomalies'
 
-export async function getCampaigns(_orgId: string): Promise<Campaign[]> {
-  // TODO: const { data } = await apiClient.get<Campaign[]>('/api/campaigns', { params: { organization_id: orgId } })
-  // TODO: return data
-  return mockCampaigns
+/** API-02 endpoints. The organization in the path is checked against the token by FastAPI. */
+function campaignsPath(orgId: string): string {
+  return `/api/orgs/${encodeURIComponent(orgId)}/campaigns`
 }
 
-export async function getCampaignDetails(id: string): Promise<CampaignDetails> {
-  // TODO: const { data } = await apiClient.get<CampaignDetails>(`/api/campaigns/${id}/details`)
-  // TODO: return data
-  const campaign = mockCampaigns.find((c) => c.id === id) ?? mockCampaigns[0]
-  return {
-    campaign,
-    time_series: [],
-    related_anomalies: mockAnomalies.filter((a) => a.campaign_id === id),
-    related_recommendations: [],
-  }
+export function getCampaigns(orgId: string, accessToken: string): Promise<Campaign[]> {
+  return apiRequest<Campaign[]>(campaignsPath(orgId), { method: 'GET', accessToken })
 }
 
+export function getCampaign(orgId: string, campaignId: string, accessToken: string): Promise<Campaign> {
+  return apiRequest<Campaign>(`${campaignsPath(orgId)}/${encodeURIComponent(campaignId)}`, {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+/** Daily rows for an inclusive `from`–`to` range (`YYYY-MM-DD`), ordered by date. */
+export function getCampaignMetrics(
+  orgId: string,
+  campaignId: string,
+  range: { from: string; to: string },
+  accessToken: string,
+): Promise<DailyMetric[]> {
+  const query = new URLSearchParams({ from: range.from, to: range.to })
+  return apiRequest<DailyMetric[]>(
+    `${campaignsPath(orgId)}/${encodeURIComponent(campaignId)}/metrics?${query.toString()}`,
+    { method: 'GET', accessToken },
+  )
+}
+
+/** Sample data: anomalies stay mocked until the API-05 AI output endpoints exist. */
 export async function getAnomalies(): Promise<Anomaly[]> {
-  // TODO: fetch from API
   return mockAnomalies
 }

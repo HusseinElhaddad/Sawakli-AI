@@ -1,136 +1,129 @@
 'use client'
 
 import Link from 'next/link'
-import { useCampaigns } from '@/hooks/useCampaigns'
-import { getSession } from '@/lib/mock-auth'
-import type { Campaign } from '@/types'
+import { Suspense, useState } from 'react'
+import { ArrowDown, ArrowUp } from 'lucide-react'
+import { PerformanceBadge, PlatformBadge, StatusBadge } from '@/features/dashboard/components/Badges'
+import { DataThrough, EmptyState, ErrorState, LoadingState, NoDataInWindow } from '@/features/dashboard/components/DataState'
+import { FilterBar } from '@/features/dashboard/components/FilterBar'
+import { formatInteger, formatMoney, formatPercent, formatRoas } from '@/features/dashboard/format'
+import { DEFAULT_SORT, initialDirection, sortPerformance, type SortKey, type SortState } from '@/features/dashboard/sort'
+import { useCampaignPerformance } from '@/features/dashboard/useCampaignPerformance'
+import { useDashboardFilters } from '@/features/dashboard/useDashboardFilters'
 
-function platformBadge(platform: string) {
-  const styles =
-    platform === 'google'
-      ? { background: 'var(--color-badge-google-bg)', color: 'var(--color-badge-google-text)' }
-      : { background: 'var(--color-accent-light)', color: 'var(--color-accent)' }
-  const label = platform === 'google' ? 'Google' : 'Meta'
-  return (
-    <span className="badge" style={styles}>
-      {label}
-    </span>
-  )
-}
-
-function statusBadge(status: string) {
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    active: { bg: 'var(--color-success-light)', color: 'var(--color-success)', label: 'Active' },
-    paused: { bg: 'var(--color-warning-light)', color: 'var(--color-warning)', label: 'Paused' },
-    removed: { bg: 'var(--color-surface-raised)', color: 'var(--color-text-muted)', label: 'Removed' },
-    unknown: { bg: 'var(--color-surface-raised)', color: 'var(--color-text-faint)', label: 'Unknown' },
-  }
-  const s = map[status] ?? map.unknown
-  return (
-    <span className="badge" style={{ background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
-  )
-}
-
-function healthBadge(health: string) {
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    strong: { bg: 'var(--color-success-light)', color: 'var(--color-success)', label: 'Strong' },
-    average: { bg: 'var(--color-warning-light)', color: 'var(--color-warning)', label: 'Average' },
-    weak: { bg: 'var(--color-error-light)', color: 'var(--color-error)', label: 'Weak' },
-  }
-  const h = map[health] ?? map.average
-  return (
-    <span className="badge" style={{ background: h.bg, color: h.color }}>
-      {h.label}
-    </span>
-  )
-}
-
-function formatNum(n: number): string {
-  return n.toLocaleString('en-US')
-}
+const COLUMNS: ReadonlyArray<{ key: SortKey; label: string; numeric?: boolean }> = [
+  { key: 'name', label: 'Campaign' },
+  { key: 'platform', label: 'Platform' },
+  { key: 'status', label: 'Status' },
+  { key: 'spend', label: 'Spend', numeric: true },
+  { key: 'clicks', label: 'Clicks', numeric: true },
+  { key: 'conversions', label: 'Conv.', numeric: true },
+  { key: 'ctr', label: 'CTR', numeric: true },
+  { key: 'cpc', label: 'CPC', numeric: true },
+  { key: 'cpa', label: 'CPA', numeric: true },
+  { key: 'roas', label: 'ROAS', numeric: true },
+  { key: 'performance', label: 'Performance' },
+]
 
 export default function CampaignsPage() {
-  const session = getSession()
-  const { data: campaigns, isLoading } = useCampaigns(session?.organization.id ?? '')
+  return (
+    <Suspense fallback={<div className="card"><LoadingState label="Loading campaigns…" /></div>}>
+      <CampaignsContent />
+    </Suspense>
+  )
+}
+
+function CampaignsContent() {
+  const [filters, setFilters] = useDashboardFilters()
+  const view = useCampaignPerformance(filters)
+  const [sort, setSort] = useState<SortState>(DEFAULT_SORT)
+
+  function toggleSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: initialDirection(key) },
+    )
+  }
 
   return (
     <div className="card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '0 0 16px' }}>
-        <h2 style={{ fontSize: 14, fontWeight: 'var(--font-weight-bold)' }}>All Campaigns</h2>
+      <div className="campaigns-header">
+        <h2>All Campaigns</h2>
       </div>
+      <FilterBar filters={filters} onChange={setFilters} />
 
-      <div className="table-wrapper">
-        <table className="table">
-          <thead>
-            <tr style={{ background: 'var(--color-surface-raised)' }}>
-              {['Campaign', 'Platform', 'Status', 'Spend', 'Clicks', 'Conv.', 'CPA', 'ROAS', 'Health'].map((h) => (
-                <th key={h} style={{ whiteSpace: 'nowrap' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr>
-                <td colSpan={9} style={{ padding: '32px 14px', textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted)' }}>
-                  Loading campaigns...
-                </td>
-              </tr>
-            )}
-            {campaigns?.map((c: Campaign) => (
-              <tr
-                key={c.id}
-                style={{
-                  background: c.health_status === 'weak' ? 'var(--color-error-light)' : undefined,
-                }}
-              >
-                <td style={{ whiteSpace: 'nowrap', fontWeight: 'var(--font-weight-bold)' }}>
-                  <Link href={`/campaigns/${c.id}`} style={{ color: 'inherit' }}>
-                    {c.name}
-                  </Link>
-                </td>
-                <td>{platformBadge(c.platform)}</td>
-                <td>{statusBadge(c.status)}</td>
-                <td>{formatNum(c.spend)} EGP</td>
-                <td>{formatNum(c.clicks)}</td>
-                <td>{formatNum(c.conversions)}</td>
-                <td
-                  style={{
-                    fontWeight: 'var(--font-weight-semibold)',
-                    color: c.cpa > 150 ? 'var(--color-error)' : undefined,
-                  }}
-                >
-                  {c.cpa.toFixed(1)} EGP
-                </td>
-                <td
-                  style={{
-                    fontWeight: 'var(--font-weight-semibold)',
-                    color: c.roas >= 4 ? 'var(--color-success)' : undefined,
-                  }}
-                >
-                  {c.roas.toFixed(1)}x
-                </td>
-                <td>{healthBadge(c.health_status)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {view.status === 'loading' && <LoadingState label="Loading campaigns…" />}
+      {view.status === 'error' && <ErrorState error={view.error} onRetry={view.retry} />}
+      {view.status === 'empty' && <EmptyState />}
+      {view.status === 'no-data' && <NoDataInWindow fetchRange={view.fetchRange} />}
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderTop: '1px solid var(--color-border)',
-          padding: '10px 14px',
-          fontSize: 12,
-          color: 'var(--color-text-muted)',
-        }}
-      >
-        <span>Showing {campaigns?.length ?? 0} campaigns</span>
-      </div>
+      {view.status === 'ready' && (
+        <>
+          <DataThrough latest={view.latest} range={view.range} isRefreshing={view.isRefreshing} />
+          <div className="table-wrapper">
+            <table className="table">
+              <thead>
+                <tr style={{ background: 'var(--color-surface-raised)' }}>
+                  {COLUMNS.map((column) => {
+                    const active = sort.key === column.key
+                    return (
+                      <th
+                        key={column.key}
+                        style={{ whiteSpace: 'nowrap' }}
+                        aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        <button type="button" className="sort-button" onClick={() => toggleSort(column.key)}>
+                          {column.label}
+                          {active && (sort.direction === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />)}
+                        </button>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {view.rows.length === 0 && (
+                  <tr>
+                    <td colSpan={COLUMNS.length} className="table-empty">No campaigns match these filters.</td>
+                  </tr>
+                )}
+                {sortPerformance(view.rows, sort).map(({ campaign, totals, flag, reason }) => (
+                  <tr key={campaign.id} className={flag === 'weak' ? 'row-weak' : undefined}>
+                    <td style={{ whiteSpace: 'nowrap', fontWeight: 'var(--font-weight-bold)' }}>
+                      <Link href={`/campaigns/${campaign.id}`} style={{ color: 'inherit' }}>
+                        {campaign.name}
+                      </Link>
+                    </td>
+                    <td><PlatformBadge platform={campaign.platform} /></td>
+                    <td><StatusBadge status={campaign.status} /></td>
+                    <td>{formatMoney(totals.spend)}</td>
+                    <td>{formatInteger(totals.clicks)}</td>
+                    <td>{formatInteger(totals.conversions)}</td>
+                    <td title={totals.ctr === null ? 'No impressions in this range' : undefined}>{formatPercent(totals.ctr)}</td>
+                    <td title={totals.cpc === null ? 'No clicks in this range' : undefined}>{formatMoney(totals.cpc)}</td>
+                    <td title={totals.cpa === null ? 'No conversions in this range' : undefined}>{formatMoney(totals.cpa)}</td>
+                    <td title={totals.roas === null ? 'No spend in this range' : undefined}>{formatRoas(totals.roas)}</td>
+                    <td><PerformanceBadge flag={flag} reason={reason} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="perf-legend">
+            <strong>Performance</strong> compares each campaign with your organization&apos;s totals for the
+            selected dates, across all platforms and statuses. <strong>Weak</strong>: ROAS below 1.0×, CPA more
+            than 25% above the organization CPA, or spend with no conversions. <strong>Strong</strong>: ROAS and CPA
+            at least as good as the organization&apos;s. <strong>No data</strong>: no spend in this range. This is a
+            display rule, not an AI assessment. Amounts are shown without a currency because the data carries none.
+          </p>
+
+          <div className="table-footer">
+            <span>Showing {view.rows.length} of {view.totalCampaigns} campaigns</span>
+          </div>
+        </>
+      )}
     </div>
   )
 }
