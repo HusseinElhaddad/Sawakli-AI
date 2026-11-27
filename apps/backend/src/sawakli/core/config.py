@@ -19,6 +19,8 @@ _ENV_FILE = _repo_env_file()
 class Settings(BaseSettings):
     jwt_secret: str = "change-this-to-a-real-secret"
     jwt_expire_minutes: int = 30
+    sync_check_every_seconds: int = 60
+    sync_refresh_every_seconds: int = 3600
 
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE if _ENV_FILE is not None else ".env",

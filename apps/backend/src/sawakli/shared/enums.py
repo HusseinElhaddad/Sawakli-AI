@@ -14,3 +14,8 @@ class JobStatus(StrEnum):
 class ConnectorType(StrEnum):
     CSV = "csv"
     GA4 = "ga4"
+
+
+class JobType(StrEnum):
+    ANALYSIS = "ANALYSIS"
+    SYNC = "SYNC"

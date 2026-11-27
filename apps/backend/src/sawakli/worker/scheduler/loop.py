@@ -1,15 +1,23 @@
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import case, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from sawakli.core.config import settings
+from sawakli.data.ingestion import record_sync_failure
 from sawakli.db.models.jobs import Job
-from sawakli.shared.enums import JobStatus
+from sawakli.shared.enums import JobStatus, JobType
 from sawakli.worker.jobs.claim import claim_next_job
 from sawakli.worker.jobs.lifecycle import transition_job_status
 from sawakli.worker.jobs.timeout import is_job_timed_out
 from sawakli.worker.orchestration.execute import execute_job
+from sawakli.worker.orchestration.synch import run_sync_job
+from sawakli.worker.scheduler.source_scheduler import find_due_sources
+
+# Tracks the last sync scheduling check in this worker process.
+_last_sync_check: datetime | None = None
 
 
 def _save_transition(
@@ -48,11 +56,21 @@ def _save_transition(
 
 
 def _get_running_job(db: Session) -> Job | None:
-    """Select the oldest RUNNING job for normal execution."""
+    """Select the oldest RUNNING job, preferring HIGH priority then oldest creation time."""
+
+    # HIGH jobs rank before LOW jobs.
+    priority_rank = case(
+        (Job.priority == "HIGH", 0),
+        (Job.priority == "LOW", 1),
+    )
+
     stmt = (
         select(Job)
         .where(Job.status == JobStatus.RUNNING.value)
-        .order_by(Job.created_at.asc())
+        .order_by(
+            priority_rank.asc(),
+            Job.created_at.asc(),
+        )
         .with_for_update(skip_locked=True)
         .limit(1)
     )
@@ -104,7 +122,39 @@ def _get_timed_out_job(db: Session) -> Job | None:
 
 
 def run_once(db: Session) -> list[Job]:
+    global _last_sync_check
     processed_jobs: list[Job] = []
+
+    now = datetime.now(UTC)
+    check_interval = timedelta(seconds=settings.sync_check_every_seconds)
+
+    # Check for due sources only when the configured interval has passed.
+    if _last_sync_check is None or now - _last_sync_check >= check_interval:
+        due_sources = find_due_sources(db, now.replace(tzinfo=None))
+
+        for source in due_sources:
+            try:
+                # Isolate each insertion so one duplicate cannot roll back others.
+                with db.begin_nested():
+                    db.add(
+                        Job(
+                            id=uuid4(),
+                            organization_id=source.organization_id,
+                            status=JobStatus.PENDING.value,
+                            priority="LOW",
+                            job_type=JobType.SYNC.value,
+                            source_id=source.data_source_id,
+                            created_at=now,
+                        )
+                    )
+                    db.flush()
+            except IntegrityError:
+                # Another worker may have created the SYNC job first.
+                continue
+
+        # Make newly created jobs visible to the claim query.
+        db.flush()
+        _last_sync_check = now
 
     # Select a PENDING job for the claim pipeline.
     claim_stmt = claim_next_job()
@@ -134,6 +184,13 @@ def run_once(db: Session) -> list[Job]:
     if timed_out_job is not None:
         # A timeout is treated like an execution error and enters
         # the same retry/backoff logic used by failed executions.
+        if timed_out_job.job_type == JobType.SYNC and timed_out_job.source_id is not None:
+            record_sync_failure(
+                db=db,
+                data_source_id=timed_out_job.source_id,
+                organization_id=timed_out_job.organization_id,
+                message="The sync took too long and will be retried.",
+            )
         _save_transition(
             db,
             timed_out_job,
@@ -143,7 +200,10 @@ def run_once(db: Session) -> list[Job]:
         processed_jobs.append(timed_out_job)
 
     elif running_job is not None:
-        proposed_status = execute_job(running_job)
+        if running_job.job_type == JobType.SYNC:
+            proposed_status = run_sync_job(db, running_job)
+        else:
+            proposed_status = execute_job(running_job)
 
         # Re-check the database immediately before writing the execution result.
         # The job may have been cancelled while execute_job() was running.

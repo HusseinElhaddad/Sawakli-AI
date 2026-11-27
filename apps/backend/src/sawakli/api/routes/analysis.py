@@ -12,7 +12,7 @@ from sawakli.api.schemas.jobs import AnalysisRefreshRequest, AnalysisRefreshResp
 from sawakli.db.campaigns_lookup import find_missing_campaign_ids
 from sawakli.db.models.jobs import Job
 from sawakli.db.session import get_db
-from sawakli.shared.enums import JobStatus
+from sawakli.shared.enums import JobStatus, JobType
 
 router = APIRouter()
 
@@ -29,6 +29,7 @@ def _find_in_flight_job(db: Session, organization_id: UUID) -> Job | None:
         .where(
             Job.organization_id == organization_id,
             Job.status.in_(_IN_FLIGHT_STATUSES),
+            Job.job_type == JobType.ANALYSIS,
         )
         .order_by(Job.created_at.desc())
         .limit(1)
