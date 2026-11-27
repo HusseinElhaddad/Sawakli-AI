@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,29 @@ def _create_test_org(db: Session, name: str = "Test Dedup Org") -> UUID:
     db.add(org)
     db.commit()
     return org_id
+
+
+def _create_test_source(db: Session, organization_id: UUID) -> UUID:
+    source_id = uuid4()
+    db.execute(
+        text(
+            "INSERT INTO data_sources (id, organization_id, provider, status) "
+            "VALUES (:id, :organization_id, 'csv_demo', 'demo_data')"
+        ),
+        {"id": source_id, "organization_id": organization_id},
+    )
+    db.commit()
+    return source_id
+
+
+def _cleanup_test_org(db: Session, organization_id: UUID) -> None:
+    db.execute(delete(Job).where(Job.organization_id == organization_id))
+    db.execute(
+        text("DELETE FROM data_sources WHERE organization_id = :organization_id"),
+        {"organization_id": organization_id},
+    )
+    db.execute(delete(Organization).where(Organization.id == organization_id))
+    db.commit()
 
 
 def test_duplicate_pending_jobs_for_same_org_rejected(db_session: Session) -> None:
@@ -166,3 +189,147 @@ def test_new_job_allowed_after_previous_job_inactive(
         db_session.execute(delete(Job).where(Job.organization_id == org_id))
         db_session.execute(delete(Organization).where(Organization.id == org_id))
         db_session.commit()
+
+
+def test_analysis_and_sync_jobs_can_be_open_for_same_org(
+    db_session: Session,
+) -> None:
+    """An ANALYSIS and a SYNC job can both be open for one organization."""
+    org_id = _create_test_org(db_session)
+    source_id = _create_test_source(db_session, org_id)
+    now = datetime.now(UTC)
+
+    try:
+        jobs = [
+            Job(
+                id=uuid4(),
+                organization_id=org_id,
+                job_type="ANALYSIS",
+                status="PENDING",
+                priority="LOW",
+                created_at=now,
+            ),
+            Job(
+                id=uuid4(),
+                organization_id=org_id,
+                job_type="SYNC",
+                source_id=source_id,
+                status="PENDING",
+                priority="LOW",
+                created_at=now,
+            ),
+        ]
+        db_session.add_all(jobs)
+        db_session.commit()
+    finally:
+        _cleanup_test_org(db_session, org_id)
+
+
+def test_two_open_sync_jobs_for_same_source_rejected(
+    db_session: Session,
+) -> None:
+    """Two open SYNC jobs for the same source raise IntegrityError."""
+    org_id = _create_test_org(db_session)
+    source_id = _create_test_source(db_session, org_id)
+    now = datetime.now(UTC)
+
+    try:
+        first = Job(
+            id=uuid4(),
+            organization_id=org_id,
+            job_type="SYNC",
+            source_id=source_id,
+            status="PENDING",
+            priority="LOW",
+            created_at=now,
+        )
+        db_session.add(first)
+        db_session.commit()
+
+        second = Job(
+            id=uuid4(),
+            organization_id=org_id,
+            job_type="SYNC",
+            source_id=source_id,
+            status="PENDING",
+            priority="LOW",
+            created_at=now,
+        )
+        db_session.add(second)
+
+        with pytest.raises(IntegrityError):
+            db_session.commit()
+
+        db_session.rollback()
+    finally:
+        _cleanup_test_org(db_session, org_id)
+
+
+def test_sync_jobs_for_different_sources_can_be_open(
+    db_session: Session,
+) -> None:
+    """Different sources can each have an open SYNC job in one organization."""
+    org_id = _create_test_org(db_session)
+    now = datetime.now(UTC)
+
+    try:
+        jobs = [
+            Job(
+                id=uuid4(),
+                organization_id=org_id,
+                job_type="SYNC",
+                source_id=_create_test_source(db_session, org_id),
+                status="PENDING",
+                priority="LOW",
+                created_at=now,
+            ),
+            Job(
+                id=uuid4(),
+                organization_id=org_id,
+                job_type="SYNC",
+                source_id=_create_test_source(db_session, org_id),
+                status="PENDING",
+                priority="LOW",
+                created_at=now,
+            ),
+        ]
+        db_session.add_all(jobs)
+        db_session.commit()
+    finally:
+        _cleanup_test_org(db_session, org_id)
+
+
+def test_new_sync_job_allowed_after_previous_sync_finishes(
+    db_session: Session,
+) -> None:
+    """A new SYNC job is allowed after the previous one finishes."""
+    org_id = _create_test_org(db_session)
+    source_id = _create_test_source(db_session, org_id)
+    now = datetime.now(UTC)
+
+    try:
+        previous = Job(
+            id=uuid4(),
+            organization_id=org_id,
+            job_type="SYNC",
+            source_id=source_id,
+            status="SUCCESS",
+            priority="LOW",
+            created_at=now,
+        )
+        db_session.add(previous)
+        db_session.commit()
+
+        next_job = Job(
+            id=uuid4(),
+            organization_id=org_id,
+            job_type="SYNC",
+            source_id=source_id,
+            status="PENDING",
+            priority="LOW",
+            created_at=now,
+        )
+        db_session.add(next_job)
+        db_session.commit()
+    finally:
+        _cleanup_test_org(db_session, org_id)

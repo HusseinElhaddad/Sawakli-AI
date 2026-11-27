@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sawakli.db.session import Base
+from sawakli.shared.enums import JobType
 
 
 class Job(Base):
@@ -19,6 +20,16 @@ class Job(Base):
     organization_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
         nullable=False,
+    )
+    job_type: Mapped[JobType] = mapped_column(
+        Enum(JobType, name="job_type_enum", create_type=False),
+        nullable=False,
+        default=JobType.ANALYSIS,
+        server_default="ANALYSIS",
+    )
+    source_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        nullable=True,
     )
     campaign_ids: Mapped[list[object] | None] = mapped_column(
         JSONB,

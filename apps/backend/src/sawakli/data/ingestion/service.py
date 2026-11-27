@@ -86,3 +86,28 @@ def ingest_csv_upload(
         row_count=raw_response.row_count,
         parse_warnings=raw_response.parse_warnings,
     )
+
+
+def record_sync_failure(
+    db: Session,
+    data_source_id: UUID,
+    organization_id: UUID,
+    message: str,
+) -> None:
+    """Record a failed sync without changing the last successful sync time.
+
+    Data owns the source freshness columns. The caller owns the transaction and
+    decides when to commit or roll back.
+    """
+    db.execute(
+        sa.text(
+            "UPDATE data_sources "
+            "SET sync_status = 'failed', last_error = :message "
+            "WHERE id = :id AND organization_id = :organization_id"
+        ),
+        {
+            "id": data_source_id,
+            "organization_id": organization_id,
+            "message": message,
+        },
+    )

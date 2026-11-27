@@ -9,7 +9,11 @@ from uuid import uuid4
 import pytest
 
 from sawakli.connectors.csv.parser import RawResponse
-from sawakli.data.ingestion.service import IngestResult, ingest_csv_upload
+from sawakli.data.ingestion.service import (
+    IngestResult,
+    ingest_csv_upload,
+    record_sync_failure,
+)
 
 
 def test_ingest_csv_upload_persists_raw_response() -> None:
@@ -228,3 +232,28 @@ def test_ingest_result_is_frozen() -> None:
 
     with pytest.raises(AttributeError):
         result.row_count = 10  # type: ignore[misc]
+
+
+def test_record_sync_failure_updates_only_the_org_scoped_source() -> None:
+    organization_id = uuid4()
+    data_source_id = uuid4()
+    db = MagicMock()
+
+    record_sync_failure(
+        db=db,
+        data_source_id=data_source_id,
+        organization_id=organization_id,
+        message="The source could not be refreshed.",
+    )
+
+    db.execute.assert_called_once()
+    statement, parameters = db.execute.call_args.args
+    assert "sync_status = 'failed'" in str(statement)
+    assert "last_error = :message" in str(statement)
+    assert "id = :id AND organization_id = :organization_id" in str(statement)
+    assert parameters == {
+        "id": data_source_id,
+        "organization_id": organization_id,
+        "message": "The source could not be refreshed.",
+    }
+    db.commit.assert_not_called()

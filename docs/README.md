@@ -39,6 +39,7 @@ Important technical information must be maintained here, not only in Notion or a
 - [CONN-02 OAuth token security and connection health](connectors/CONN-02-oauth-token-security.md)
 - [UI-04 dashboard KPI cards and campaign table](ui/UI-04-dashboard-kpis-and-campaign-table.md)
 - [Release and demo checklist](testing/release-checklist.md)
+- [WORK-03 connector sync](worker/WORK-03-connector-sync.md)
 
 ## Categories
 
