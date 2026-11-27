@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from sawakli.api.routes import auth, campaigns
+from sawakli.api.routes import ai_outputs, auth, campaigns
 from sawakli.api.routes.analysis import router as analysis_router
 from sawakli.api.routes.connectors import router as connectors_router
 from sawakli.api.routes.jobs import router as jobs_router
@@ -27,6 +27,7 @@ app.add_middleware(
 )
 app.include_router(auth.router)
 app.include_router(campaigns.router)
+app.include_router(ai_outputs.router)
 
 app.include_router(connectors_router, prefix="/api/connectors", tags=["connectors"])
 app.include_router(jobs_router, prefix="/api/jobs", tags=["jobs"])
